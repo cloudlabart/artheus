@@ -528,11 +528,11 @@ async function previewColumn() {
 $('#colPreview').onclick = previewColumn;
 function renderSeo() {
   if (!seo.date) { $('#seoDate').textContent = '점검 기록 없음'; $('#seoSummary').textContent = '서버가 매주 월요일 자동 점검합니다. 지금 점검하려면 SEO 점검을 누르세요.'; $('#seoTopics').innerHTML = ''; return; }
-  $('#seoDate').textContent = `${seo.date} 점검`;
+  $('#seoDate').textContent = `${seo.date} 점검 · ${seo.source === 'local' ? '이 Mac' : '서버'}`;
   const t = seo.column_totals;
-  $('#seoSummary').textContent = `보강 필요 ${seo.refresh_candidates.length}편 · 사이트 문제 ${seo.site_issues.length} · 깨진 링크 ${seo.broken_links.length}${t ? ` · 칼럼 클릭 ${t.clicks} / 노출 ${t.impressions}` : ' · 검색 데이터 없음'}${seo.new_topics.length ? ' · 새 주제 후보:' : ''}`;
+  $('#seoSummary').textContent = `보강 필요 ${seo.refresh_candidates.length}편 · 사이트 문제 ${seo.site_issues.length} · 깨진 링크 ${seo.broken_links.length}${t ? ` · 칼럼 클릭 ${t.clicks} / 노출 ${t.impressions}` : seo.public ? ' · 숫자는 CSV 올린 뒤 SEO 점검' : ' · 검색 데이터 없음'}${seo.new_topics.length ? ' · 새 주제 후보:' : ''}`;
   $('#seoTopics').innerHTML = '';
-  (seo.new_topics || []).slice(0, 4).forEach((tp) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = `${tp.query} (노출 ${tp.impressions})`; b.title = '이 검색어로 새 칼럼'; b.onclick = () => { $('#colForm').hidden = false; $('#colKeyword').value = tp.query; $('#colKeyword').focus(); }; $('#seoTopics').appendChild(b); });
+  (seo.new_topics || []).slice(0, 4).forEach((tp) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = tp.impressions != null ? `${tp.query} (노출 ${tp.impressions})` : tp.query; b.title = '이 검색어로 새 칼럼'; b.onclick = () => { $('#colForm').hidden = false; $('#colKeyword').value = tp.query; $('#colKeyword').focus(); }; $('#seoTopics').appendChild(b); });
 }
 $('#seoCheck').onclick = async () => {
   const btn = $('#seoCheck'); btn.disabled = true; btn.textContent = '점검 중…';
@@ -572,7 +572,7 @@ $('#gscInput').onchange = async (e) => {
 async function publishColumn(un) {
   const c = colData.columns.find((x) => x.slug === curSlug); if (!c || busy) return;
   const verb = un ? '발행을 취소' : c.status === 'published' ? '수정 내용을 사이트에 반영' : 'c-art.co.kr/column 에 발행';
-  if (!confirm(`“${c.title}” ${verb}할까요?\n${colData.remote ? 'GitHub에 올리면 Vercel이 자동 배포합니다.' : '(GitHub 미연결: 커밋까지만 합니다)'}`)) return;
+  if (!confirm(`“${c.title}” ${verb}할까요?\n${colData.remote ? 'GitHub에 올리면 GitHub Pages가 자동 배포합니다.' : '(GitHub 미연결: 커밋까지만 합니다)'}`)) return;
   const btn = un ? $('#colUnpublish') : $('#colPublish'); btn.disabled = true;
   const r = await fetch('/__studio/api/columns/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: c.slug, unpublish: un }) });
   const j = await r.json(); btn.disabled = false;

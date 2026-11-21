@@ -273,14 +273,17 @@ export function artheusStudio(): Plugin {
         }
         /* ── 정기 SEO 점검 (서버의 주간 작업과 같은 스크립트) ── */
         if (url === '/__studio/api/seo') {
-          const f = path.join(root, 'content', 'reports', 'latest.json');
-          return json(res, 200, fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {});
+          // 서버 리포트(content/reports, 숫자 없음)와 이 Mac의 점검(.studio/reports, 숫자 포함) 중 최신 것
+          const files = [path.join(root, '.studio', 'reports', 'latest.json'), path.join(root, 'content', 'reports', 'latest.json')]
+            .filter((f) => fs.existsSync(f)).sort((x, y) => fs.statSync(y).mtimeMs - fs.statSync(x).mtimeMs);
+          return json(res, 200, files.length ? { ...JSON.parse(fs.readFileSync(files[0], 'utf8')), source: files[0].includes('.studio') ? 'local' : 'server' } : {});
         }
         if (url === '/__studio/api/seo/check' && req.method === 'POST') {
           const { links } = await readBody(req);
-          const r = runPy(root, ['tools/geo-seo/scripts/seo_maintain.py', '--quiet', ...(links ? ['--check-links'] : [])]);
+          // 이 Mac에서만 보는 자세한 점검(클릭·순위 숫자 포함) → .studio/reports (git에 올라가지 않음)
+          const r = runPy(root, ['tools/geo-seo/scripts/seo_maintain.py', '--quiet', '--out-dir', '.studio/reports', ...(links ? ['--check-links'] : [])]);
           if (!r.ok) return json(res, 500, { error: r.out.slice(-600) || r.error });
-          return json(res, 200, JSON.parse(fs.readFileSync(path.join(root, 'content', 'reports', 'latest.json'), 'utf8')));
+          return json(res, 200, { ...JSON.parse(fs.readFileSync(path.join(root, '.studio', 'reports', 'latest.json'), 'utf8')), source: 'local' });
         }
         if (url === '/__studio/api/git/pull' && req.method === 'POST') {
           if (running) return json(res, 409, { error: '작업이 끝난 뒤에 받으세요.' });
@@ -326,7 +329,7 @@ export function artheusStudio(): Plugin {
           if (push !== false && runGit(root, ['remote']).out) {
             runGit(root, ['pull', '--rebase', '--autostash']); // 서버의 주간 점검이 올린 커밋을 먼저 받음
             const p = runGit(root, ['push']);
-            steps.push(p.ok ? 'GitHub에 올렸습니다. Vercel이 1–2분 안에 배포합니다.' : 'push 실패: ' + p.out.slice(-400));
+            steps.push(p.ok ? 'GitHub에 올렸습니다. GitHub Pages가 2–3분 안에 배포합니다(Actions › 사이트 배포).' : 'push 실패: ' + p.out.slice(-400));
           } else steps.push('GitHub 원격 저장소가 없어 push는 하지 않았습니다.');
           return json(res, 200, { ok: true, steps });
         }

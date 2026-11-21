@@ -30,3 +30,4 @@
 - 칼럼은 SPA 화면이 아니라 정적 페이지 `/column/<slug>/`로 발행된다(검색엔진·AI 수집기가 읽을 수 있게). React 쪽 `go('column')`은 이 주소로 이동만 한다.
 - 발행(`status: published` + git push)은 사용자가 명시적으로 요청했을 때만, `content-publish` 스킬 절차대로.
 - 정기 SEO: `.github/workflows/seo-weekly.yml`(주간 점검 → `content/reports/latest.json`), `seo-refresh.yml`(월간 보강 → PR). 보강 요청을 받으면 `content/reports/latest.json`의 해당 칼럼 `reasons`·`missing_queries`를 근거로 삼는다.
+- 배포: GitHub Pages(`.github/workflows/deploy-pages.yml`). 저장소가 공개라 Search Console 숫자·CSV는 커밋하지 않는다(`content/data/`는 gitignore, 서버 리포트는 `--public`).

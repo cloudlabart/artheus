@@ -78,6 +78,9 @@ def main():
     ap.add_argument("--gsc-prev", default=os.path.join("content", "data", "gsc_prev.csv"))
     ap.add_argument("--check-links", action="store_true")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--public", action="store_true",
+                    help="공개 저장소용: 클릭·노출·순위 숫자를 빼고 '무엇을 할지'만 남김")
+    ap.add_argument("--out-dir", default=REPORTS)
     a = ap.parse_args()
 
     cfg = load_cfg()
@@ -127,10 +130,10 @@ def main():
             before, _ = page_stats(prev, url) if prev else ({"clicks": 0, "impressions": 0, "position": None}, [])
             perf = {"now": now, "before": before}
             if prev and before["clicks"] >= 10 and now["clicks"] < before["clicks"] * 0.7:
-                reasons.append(f"클릭 감소 {before['clicks']}→{now['clicks']}")
+                reasons.append("클릭 감소" if a.public else f"클릭 감소 {before['clicks']}→{now['clicks']}")
                 score += 25
             if now["position"] and before["position"] and now["position"] - before["position"] >= 3:
-                reasons.append(f"평균 순위 하락 {before['position']}→{now['position']}")
+                reasons.append("평균 순위 하락" if a.public else f"평균 순위 하락 {before['position']}→{now['position']}")
                 score += 20
             qs = [q for q in aggregate(rows) if q["impressions"] >= mcfg["min_impressions"]]
             striking = [q for q in qs if 4 <= q["position"] <= 20]
@@ -183,26 +186,31 @@ def main():
             tq = tokens(q["query"])
             if any(len(tq & c) / max(1, len(tq)) >= 0.5 for c in covered):
                 continue
-            new_topics.append({"query": q["query"], "impressions": q["impressions"], "position": q["position"],
-                               "question": bool(QUESTION_RE.search(q["query"]))})
+            t = {"query": q["query"], "question": bool(QUESTION_RE.search(q["query"]))}
+            if not a.public:
+                t.update(impressions=q["impressions"], position=q["position"])
+            new_topics.append(t)
             if len(new_topics) >= 8:
                 break
 
     columns.sort(key=lambda c: -c["priority"])
     candidates = [c["slug"] for c in columns if c["priority"] >= 20][: mcfg["max_candidates"]]
+    if a.public:
+        for c in columns:
+            c["performance"] = None
     totals = None
-    if has_gsc:
+    if has_gsc and not a.public:
         col_rows = [r for r in cur if base in r["page"]]
         totals = {"clicks": int(sum(r["clicks"] for r in col_rows)), "impressions": int(sum(r["impressions"] for r in col_rows))}
-    report = {"date": TODAY.isoformat(), "gsc": has_gsc, "gsc_compare": bool(prev), "links_checked": a.check_links,
+    report = {"date": TODAY.isoformat(), "public": a.public, "gsc": has_gsc, "gsc_compare": bool(prev), "links_checked": a.check_links,
               "published": len(published), "drafts": len(all_a) - len(published), "column_totals": totals,
               "refresh_candidates": candidates, "columns": columns, "broken_links": broken,
               "site_issues": site_issues, "new_topics": new_topics}
 
-    os.makedirs(REPORTS, exist_ok=True)
-    json.dump(report, open(os.path.join(REPORTS, "latest.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    os.makedirs(a.out_dir, exist_ok=True)
+    json.dump(report, open(os.path.join(a.out_dir, "latest.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     md = to_markdown(report)
-    open(os.path.join(REPORTS, f"seo-{TODAY.isoformat()}.md"), "w", encoding="utf-8").write(md)
+    open(os.path.join(a.out_dir, f"seo-{TODAY.isoformat()}.md"), "w", encoding="utf-8").write(md)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8").write(md)
     if os.environ.get("GITHUB_OUTPUT"):
@@ -230,8 +238,14 @@ def to_markdown(r):
     if r["broken_links"]:
         L += ["## 깨진 링크", ""] + [f"- {b['status']} · {b['url']} ({', '.join(b['columns'])})" for b in r["broken_links"]] + [""]
     if r["new_topics"]:
-        L += ["## 새 칼럼 후보 (아직 다루지 않는 검색어)", "", "| 검색어 | 노출 | 현재 순위 |", "|---|---|---|"]
-        L += [f"| {t['query']} | {t['impressions']} | {t['position']} |" for t in r["new_topics"]] + [""]
+        L += ["## 새 칼럼 후보 (아직 다루지 않는 검색어)", ""]
+        if r.get("public"):
+            L += [f"- {t['query']}" for t in r["new_topics"]] + [""]
+        else:
+            L += ["| 검색어 | 노출 | 현재 순위 |", "|---|---|---|"]
+            L += [f"| {t['query']} | {t['impressions']} | {t['position']} |" for t in r["new_topics"]] + [""]
+    if r.get("public") and r["gsc"]:
+        L += ["> 공개 저장소라 클릭·노출·순위 숫자는 싣지 않았습니다. 숫자는 Mac의 아터스 스튜디오 › 칼럼 › SEO 점검(CSV)에서 확인하세요.", ""]
     if not r["gsc"]:
         L += ["> Search Console 데이터가 없어 검색 성과는 점검하지 않았습니다. GitHub Secrets에 `GSC_SA_KEY`를 넣거나, 스튜디오 칼럼 탭에서 CSV를 올리세요.", ""]
     return "\n".join(L)

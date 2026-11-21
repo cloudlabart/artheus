@@ -1,6 +1,7 @@
 # SEO 주간 점검 — 매주 월요일 오전 9시 17분(한국 시간) 자동 실행. Actions 탭에서 직접 실행도 가능.
 # 1) Search Console 데이터 수집(최근 28일 + 그 전 28일)  2) 칼럼 페이지·사이트맵 다시 생성
 # 3) 칼럼별 순위·클릭 변화, 오래된 내용, 깨진 링크 점검 → content/reports/  4) "SEO 주간 리포트" 이슈에 결과 댓글
+# 공개 저장소라 검색 데이터(CSV)는 저장하지 않고, 리포트에는 숫자 없이 "할 일"만 남김.
 # 필요한 Secret(선택): GSC_SA_KEY = Search Console 읽기 권한을 준 서비스 계정 키(JSON). 없으면 검색 성과 없이 나머지만 점검.
 name: SEO 주간 점검
 
@@ -51,13 +52,13 @@ jobs:
         run: python3 tools/geo-seo/scripts/build_site.py
 
       - name: SEO 점검
-        run: python3 tools/geo-seo/scripts/seo_maintain.py --check-links --quiet
+        run: python3 tools/geo-seo/scripts/seo_maintain.py --check-links --quiet --public
 
       - name: 결과 저장
         run: |
           git config user.name "artheus-seo-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/reports content/data public/column public/sitemap.xml public/rss.xml
+          git add content/reports public/column public/sitemap.xml public/rss.xml
           if git diff --cached --quiet; then echo "바뀐 것 없음"; exit 0; fi
           git commit -m "SEO 주간 점검 $(date +%F)"
           git pull --rebase --autostash

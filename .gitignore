@@ -54,3 +54,6 @@ logs/
 
 # 바이브 코딩 스튜디오 되돌리기 기록
 .studio/
+
+# Search Console 원천 데이터 (공개 저장소에 올리지 않음)
+content/data/

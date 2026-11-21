@@ -1,0 +1,67 @@
+# 사이트 배포 — main 에 올라오면 GitHub Pages 로 자동 배포 (Actions 탭에서 직접 실행도 가능)
+# 처음 한 번: Settings › Pages › Source = "GitHub Actions", Custom domain = 사이트 주소
+# 저장소 변수(Settings › Secrets and variables › Actions › Variables):
+#   PAGES_DOMAIN     배포할 도메인 (예: new.c-art.co.kr → 도메인 이전 뒤 www.c-art.co.kr). 비어 있으면 빌드만 하고 배포하지 않음
+#   SEARCH_INDEXING  "on" 이면 검색 허용. 그 외(기본)는 모든 페이지 검색 제외 — 미리보기 주소가 검색에 잡히지 않게
+name: 사이트 배포
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "content/reports/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 칼럼 페이지·사이트맵 생성
+        run: python3 tools/geo-seo/scripts/build_site.py
+
+      - name: 사이트 빌드
+        run: |
+          npm ci
+          npm run build
+
+      - name: 배포 마무리 (검색 허용 여부·404)
+        env:
+          SEARCH_INDEXING: ${{ vars.SEARCH_INDEXING }}
+          PAGES_DOMAIN: ${{ vars.PAGES_DOMAIN }}
+        run: python3 tools/geo-seo/scripts/pages_finalize.py dist
+
+      - uses: actions/upload-pages-artifact@v3
+        if: vars.PAGES_DOMAIN != ''
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: vars.PAGES_DOMAIN != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

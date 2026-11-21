@@ -9,7 +9,7 @@
 - **칼럼 선택 → 채팅**: "도입부를 바꿔줘"처럼 말하면 그 칼럼을 고치고 미리보기를 다시 만듭니다.
 - **미리보기**: 오른쪽 화면이 실제 발행될 `/column/<slug>/` 페이지입니다. 데스크톱·모바일 버튼으로 확인합니다.
 - **네이버용 열기**: 네이버 블로그에 붙여넣을 제목·본문·태그 복사 페이지.
-- **발행**: 검수 통과 · 채울 자리 없음 · 저자 있음일 때만 됩니다. `public/column/`·사이트맵·RSS를 만들고 GitHub에 올리면 Vercel이 배포합니다.
+- **발행**: 검수 통과 · 채울 자리 없음 · 저자 있음일 때만 됩니다. `public/column/`·사이트맵·RSS를 만들고 GitHub에 올리면 GitHub Pages가 배포합니다.
 - 칼럼 작업에는 Python 3이 필요합니다(Mac은 기본 설치. `python3 --version`으로 확인).
 
 ## 서버 정기 SEO (GitHub Actions)
@@ -29,7 +29,22 @@
 3. Actions 탭 › **SEO 주간 점검** › Run workflow 로 한 번 실행해 확인.
 
 설정값(`content/geo-seo.config.json › maintenance`): `refresh_after_days`(오래됨 기준 일수), `auto_refresh_per_month`(월 자동 보강 편수), `min_impressions`.
-리포트·검색 데이터만 바뀐 커밋은 Vercel이 다시 배포하지 않습니다(`vercel.json › ignoreCommand`).
+리포트만 바뀐 커밋은 다시 배포하지 않습니다.
+**공개 저장소라서** 서버 리포트(이슈·`content/reports/`)에는 클릭·노출·순위 숫자를 싣지 않고 "할 일"만 남깁니다. Search Console CSV(`content/data/`)는 git에 올라가지 않습니다. 숫자가 들어간 점검은 Mac 스튜디오 › 칼럼 › CSV 올리기 → SEO 점검으로 봅니다(`.studio/reports/`, 이 Mac에만 저장).
+
+## 배포 (GitHub Pages)
+`main`에 올라오면 **Actions › 사이트 배포**가 칼럼 페이지 생성 → 빌드 → GitHub Pages 배포까지 합니다.
+
+처음 한 번 설정:
+1. 저장소 **Settings › Pages › Build and deployment › Source** 를 **GitHub Actions** 로.
+2. 도메인 회사(가비아 등) DNS에 미리보기 주소 추가: `new` CNAME `cloudlabart.github.io` (지금 c-art.co.kr 사이트에는 영향 없음).
+3. **Settings › Pages › Custom domain** 에 `new.c-art.co.kr` 입력 → Enforce HTTPS 체크.
+4. **Settings › Secrets and variables › Actions › Variables** 에 `PAGES_DOMAIN` = `new.c-art.co.kr`.
+5. **Actions › 사이트 배포 › Run workflow**.
+
+미리보기 기간에는 모든 페이지가 검색 제외(noindex)입니다. 개편이 끝나 도메인을 옮길 때:
+- DNS: `@` A 레코드 4개 `185.199.108.153` `185.199.109.153` `185.199.110.153` `185.199.111.153`, `www` CNAME `cloudlabart.github.io` (MX·TXT 메일 레코드는 건드리지 않기)
+- Custom domain 을 `www.c-art.co.kr` 로, 변수 `PAGES_DOMAIN`=`www.c-art.co.kr`, `SEARCH_INDEXING`=`on` → 사이트 배포 다시 실행
 
 # artheus 웹 (Figma 독립 버전)
 
@@ -42,7 +57,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 http://localhost:5173 을 엽니다. 배포용 빌드는 `npm run build` → `dist/` 폴더를 Vercel·Netlify·Cloudflare Pages 등에 올리면 됩니다.
+브라우저에서 http://localhost:5173 을 엽니다. 배포는 GitHub Pages(위 "배포" 참고)로 자동으로 됩니다.
 
 ## 들어 있는 것 (원본 그대로)
 
