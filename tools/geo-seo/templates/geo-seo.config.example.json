@@ -1,0 +1,93 @@
+{
+  "site_url": "https://example.com/blog",
+  "site_domain": "example.com",
+  "brand": "브랜드명",
+  "author": "홍길동",
+  "author_bio": "10년차 ○○ 전문가, ○○ 자격 보유",
+  "audience": "연기를 공부하는 고등학생·대학생 (입시, 학교 공연, 오디션 준비)",
+  "tone": "친근한 '~해요'체, 쉬운 설명, 과장 금지",
+  "gsc": {
+    "site": "sc-domain:example.com",
+    "days": 90,
+    "country": "kor",
+    "source": "api | windsor | supermetrics | csv"
+  },
+  "naver": {
+    "blog_id": "my_naver_id",
+    "blog_topic": "IT·컴퓨터"
+  },
+  "wordpress": {
+    "url": "https://example.com",
+    "default_status": "draft",
+    "default_categories": [
+      "가이드"
+    ],
+    "seo_plugin": "rankmath",
+    "inject_jsonld": false,
+    "styled_content": false
+  },
+  "markdown": {
+    "out_dir": "../my-site/src/content/blog",
+    "flavor": "astro",
+    "filename": "{slug}.md",
+    "inject_jsonld": true,
+    "draft": false
+  },
+  "notion": {
+    "database_id": "",
+    "status_type": "select",
+    "default_status": "Draft",
+    "properties": {
+      "title": "Name",
+      "slug": "Slug",
+      "status": "Status",
+      "keyword": "Keyword",
+      "description": "Description",
+      "tags": "Tags",
+      "date": "Date"
+    }
+  },
+  "quality": {
+    "lint_threshold": 80,
+    "require_human_approval_before_publish": true
+  },
+  "editorial": {
+    "audience": "연기를 공부하는 고등학생·대학생 (입시, 학교 공연, 오디션 준비)",
+    "reading_level": "고등학생이 한 번 읽고 이해할 수 있는 수준. 전문용어는 처음 나올 때 괄호로 풀이",
+    "voice": "친근한 '~해요'체, 독자에게 직접 말 걸기, 짧은 문장",
+    "max_solutions": 5,
+    "require_recommended_books": true,
+    "min_recommended_books": 2,
+    "bookstores": [
+      "알라딘",
+      "예스24",
+      "교보문고"
+    ],
+    "affiliate_links": false
+  },
+  "design": {
+    "brand_name": "",
+    "logo_url": "",
+    "primary": "#2F5BEA",
+    "primary_ink": "#FFFFFF",
+    "accent": "#FFB020",
+    "text": "#1A1D23",
+    "muted": "#6B7280",
+    "bg": "#FFFFFF",
+    "surface": "#F6F7F9",
+    "line": "#E5E7EB",
+    "radius": "14px",
+    "body_size": "17px",
+    "line_height": "1.85",
+    "content_width": "720px",
+    "show_toc": true,
+    "show_reading_time": true,
+    "footer_text": "",
+    "cta": {
+      "title": "",
+      "text": "",
+      "button": "",
+      "url": ""
+    }
+  }
+}

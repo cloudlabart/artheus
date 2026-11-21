@@ -1,0 +1,84 @@
+{
+  "site_url": "https://www.c-art.co.kr",
+  "site_domain": "c-art.co.kr",
+  "brand": "아터스 ARTHEUS",
+  "author": "",
+  "author_bio": "",
+  "audience": "연기를 공부하는 고등학생·대학생 (입시, 학교 공연, 오디션 준비)",
+  "tone": "친근한 '~해요'체, 쉬운 설명, 과장 금지",
+  "gsc": {
+    "site": "sc-domain:c-art.co.kr",
+    "days": 90,
+    "country": "kor",
+    "source": "csv"
+  },
+  "naver": {
+    "blog_id": "",
+    "blog_topic": "연기·공연"
+  },
+  "quality": {
+    "lint_threshold": 80,
+    "require_human_approval_before_publish": true
+  },
+  "editorial": {
+    "audience": "연기를 공부하는 고등학생·대학생 (입시, 학교 공연, 오디션 준비)",
+    "reading_level": "고등학생이 한 번 읽고 이해할 수 있는 수준. 전문용어는 처음 나올 때 괄호로 풀이",
+    "voice": "친근한 '~해요'체, 독자에게 직접 말 걸기, 짧은 문장",
+    "max_solutions": 5,
+    "require_recommended_books": true,
+    "min_recommended_books": 2,
+    "bookstores": [
+      "알라딘",
+      "예스24",
+      "교보문고"
+    ],
+    "affiliate_links": false
+  },
+  "design": {
+    "brand_name": "artheus",
+    "logo_url": "",
+    "primary": "#153956",
+    "primary_ink": "#FFFFFF",
+    "accent": "#2D5E88",
+    "text": "#132B3F",
+    "muted": "#4A6276",
+    "bg": "#F3F0EA",
+    "surface": "#FAF8F4",
+    "line": "#D9DEE2",
+    "radius": "16px",
+    "font_family": "'Pretendard Variable', Pretendard, 'IBM Plex Sans KR', -apple-system, 'Apple SD Gothic Neo', sans-serif",
+    "font_css": "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css",
+    "body_size": "17px",
+    "line_height": "1.85",
+    "content_width": "720px",
+    "show_toc": true,
+    "show_reading_time": true,
+    "footer_text": "artheus · 연기 전공자 · 연극영화과 입시생을 위한 artheus · 사업자등록번호 810-90-02139",
+    "nav": [
+      {
+        "label": "홈",
+        "url": "/"
+      },
+      {
+        "label": "컬럼",
+        "url": "/column/"
+      }
+    ],
+    "cta": {
+      "title": "연기 상담은 인스타그램 DM으로",
+      "text": "지금 준비 중인 대본이나 입시 일정을 보내 주시면, artheus 코치가 1:1로 방향을 잡아 드려요.",
+      "button": "@artheus_act 상담하기",
+      "url": "https://www.instagram.com/artheus_act/"
+    }
+  },
+  "business_name": "",
+  "business_reg_no": "810-90-02139",
+  "column_path": "/column/",
+  "gtm_id": "GTM-N6Z4Q7MX",
+  "maintenance": {
+    "refresh_after_days": 120,
+    "min_impressions": 20,
+    "max_candidates": 5,
+    "auto_refresh_per_month": 2
+  }
+}

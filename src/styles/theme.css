@@ -1,0 +1,309 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ARTHEUS × ARTHEUS ON Practice Studio — 통합 디자인 시스템
+   CAL: 밝고 깔끔한 화이트 기반 + ARTHEUS ON: DM Sans 통합 폰트, 차트 토큰, 다크모드 지원
+   ═══════════════════════════════════════════════════════════════════ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+
+  /* ── CAL 브랜드 컬러 (메인 유지) ── */
+  --primary-blue: #6888FA;
+  --soft-button-blue: #DCE8FF;
+  --border-blue: transparent;
+  --pale-background: #F7FBFF;
+  --pale-background-alt: #EEF6FF;
+  --card-border: #E5E5E5;
+  --placeholder-gray: #E8E8E6;
+  --muted-text: #6B7280;
+  --muted-text-alt: #A0A0A0;
+  --text-black: #0A0A0A;
+  --text-black-alt: #111111;
+
+  /* ── ARTHEUS ON 차트 컬러 (Practice Studio용 지표) ── */
+  --artheus-on-electric: #0099ff;
+  --artheus-on-void: #050505;
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  /* ── CAL × ARTHEUS ON 절충 시스템 토큰 ── */
+  --background: #FAFAFA;
+  --foreground: var(--text-black);
+  --card: #FAFAFA;
+  --card-foreground: var(--text-black);
+  --popover: #FAFAFA;
+  --popover-foreground: var(--text-black);
+  --primary: var(--primary-blue);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--soft-button-blue);
+  --secondary-foreground: var(--text-black);
+  --muted: var(--pale-background-alt);
+  --muted-foreground: var(--muted-text);
+  --accent: var(--primary-blue);
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: transparent;
+  --input: transparent;
+  --input-background: #FAFAFA;
+  --ring: var(--primary-blue);
+  --radius: 24px;
+
+  /* ── ARTHEUS ON 사이드바 토큰 (Practice Studio 레이아웃용) ── */
+  --sidebar: #f8fafc;
+  --sidebar-foreground: var(--text-black);
+  --sidebar-primary: var(--primary-blue);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--pale-background);
+  --sidebar-accent-foreground: var(--text-black);
+  --sidebar-border: transparent;
+  --sidebar-ring: var(--primary-blue);
+
+  /* ── 그림자 ── */
+  --shadow-soft: 8px 8px 16px #E2E8F0, -8px -8px 16px #FFFFFF;
+  --shadow-premium: 12px 12px 24px #E2E8F0, -12px -12px 24px #FFFFFF;
+  --shadow-premium-lg: 16px 16px 32px #E2E8F0, -16px -16px 32px #FFFFFF;
+
+  /* ── 간격 ── */
+  --space-page: clamp(64px, 8vw, 96px);
+  --space-card: clamp(20px, 3vw, 24px);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+}
+
+/* ── 다크 모드 (Practice Studio 전용 영역) ── */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f0f0f0;
+  --card: #111111;
+  --card-foreground: #f0f0f0;
+  --popover: #111111;
+  --popover-foreground: #f0f0f0;
+  --primary: #0099ff;
+  --primary-foreground: #000000;
+  --secondary: #1a1a2e;
+  --secondary-foreground: #f0f0f0;
+  --muted: #1a1a1a;
+  --muted-foreground: #888888;
+  --accent: #0099ff;
+  --accent-foreground: #000000;
+  --destructive: #ff3366;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.05);
+  --ring: #0099ff;
+  --sidebar: #0d0d0d;
+  --sidebar-foreground: #f0f0f0;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-pill: 9999px;
+  --radius-premium: 40px;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    /* CAL 기본 폰트 + ARTHEUS ON Inter 폴백 */
+    font-family: 'IBM Plex Sans KR', 'Pretendard Variable', 'Pretendard', 'Inter', 'DM Sans', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  /* CAL × ARTHEUS ON 통합 헤딩: DM Sans (한국어 폴백: IBM Plex Sans KR, Pretendard) */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', 'IBM Plex Sans KR', 'Pretendard Variable', sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+
+  html { font-size: var(--font-size); }
+
+  /* 사이트 전체 드래그·텍스트 선택 방지 (입력 요소는 예외) */
+  html, body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  img, svg, a, video, canvas {
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 5.5rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+
+  h2 {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  label, button, input {
+    font-size: var(--font-size);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+}
+
+@layer utilities {
+  /* ── CAL 공개 사이트 스타일 ── */
+  .glass-header {
+    background: rgba(247, 251, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(63, 125, 245, 0.1);
+  }
+
+  .hero-bg {
+    background: radial-gradient(circle at 50% 0%, rgba(63, 125, 245, 0.04) 0%, transparent 50%), #FFFFFF;
+  }
+
+  .footer-bg {
+    background: linear-gradient(180deg, #F7FBFF 0%, #EEF6FF 100%);
+  }
+
+  .card-hover {
+    transition: all 0.3s;
+  }
+
+  .card-premium {
+    border-radius: 40px; box-shadow: 0 8px 32px rgba(63,125,245,0.08), 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s;
+  }
+
+  .pill-black  { background-color: #000; color: #fff; border-radius: 9999px; padding: 0.5rem 1.5rem; }
+  .pill-blue   { background-color: #3F7DF5; color: #fff; border-radius: 9999px; padding: 0.5rem 1.5rem; }
+  .pill-outline { border: 1px solid #E5E5E5; border-radius: 9999px; padding: 0.5rem 1.5rem; transition: border-color 0.3s; }
+  .underline-input { border: none; border-bottom: 1px solid #E5E5E5; outline: none; transition: border-color 0.3s; }
+
+  .text-display-1 { font-size: clamp(3.25rem, 6vw, 5.5rem); line-height: 1; letter-spacing: -0.035em; }
+  .text-display-2 { font-size: clamp(2.5rem, 4vw, 3.5rem); line-height: 1.05; letter-spacing: -0.03em; }
+
+  /* ── ARTHEUS ON Practice Studio 전용 유틸리티 ── */
+  /* CAL 통합 디스플레이 폰트 */
+  .syne {
+    font-family: 'DM Sans', 'IBM Plex Sans KR', sans-serif;
+  }
+
+  /* ARTHEUS ON 글리치 효과 (Practice Studio 한정) */
+  .artheus-on-glitch {
+    position: relative;
+  }
+  .artheus-on-glitch::before,
+  .artheus-on-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--artheus-on-void);
+  }
+  .artheus-on-glitch::before {
+    left: 2px;
+    text-shadow: -1px 0 #ff00c1;
+    clip-path: inset(44% 0 61% 0);
+    animation: artheus-on-glitch 0.4s infinite linear alternate-reverse;
+  }
+  .artheus-on-glitch::after {
+    left: -2px;
+    text-shadow: -1px 0 var(--artheus-on-electric);
+    clip-path: inset(44% 0 61% 0);
+    animation: artheus-on-glitch 0.4s infinite linear alternate-reverse;
+  }
+
+  @keyframes artheus-on-glitch {
+    0%   { clip-path: inset(20% 0 80% 0); transform: translate(-2px, 1px); }
+    20%  { clip-path: inset(60% 0 10% 0); transform: translate(2px, -1px); }
+    40%  { clip-path: inset(40% 0 50% 0); transform: translate(-2px, 2px); }
+    60%  { clip-path: inset(80% 0 5%  0); transform: translate(2px, -2px); }
+    80%  { clip-path: inset(10% 0 60% 0); transform: translate(-1px, 1px); }
+    100% { clip-path: inset(30% 0 30% 0); transform: translate(1px, -1px); }
+  }
+
+  /* ARTHEUS ON 배경 그리드 (Practice Studio 다크 배경용) */
+  .artheus-on-bg-grid {
+    background-size: 40px 40px;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+  }
+
+  /* ARTHEUS ON 노이즈 텍스처 */
+  .artheus-on-noise {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 50;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+}

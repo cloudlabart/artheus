@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아터스 스튜디오</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: chat column on the left, preview monitor filling the rest */
+:root {
+  --bg: #e8e5de; --panel: #faf8f4; --panel-2: #f1ede5; --line: #ddd6ca;
+  --fg: #132b3f; --muted: #5b7285; --accent: #153956; --accent-2: #2d5e88; --accent-soft: #dfe8ef;
+  --ok: #2f7a4f; --warn: #a3621b; --danger: #b23a32; --dot: #cfc8bb;
+  --f-ui: "IBM Plex Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+  --f-code: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0f151b; --panel: #151d25; --panel-2: #1b252f; --line: #26323d;
+  --fg: #e6edf3; --muted: #8fa3b5; --accent: #a9c5d9; --accent-2: #7fa7c6; --accent-soft: #1f3243;
+  --ok: #6fcf97; --warn: #e3a35a; --danger: #ff8077; --dot: #1f2a34; color-scheme: dark } }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 13.5px/1.5 var(--f-ui); overflow: hidden; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+[hidden] { display: none !important; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+.top { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.brand { font-weight: 700; letter-spacing: .02em; display: flex; gap: 8px; align-items: center; }
+.brand i { font-style: normal; font-weight: 800; letter-spacing: .12em; }
+.brand small { color: var(--muted); font-weight: 500; }
+.pill { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.pill.ok::before { background: var(--ok); } .pill.bad::before { background: var(--danger); } .pill.busy::before { background: var(--warn); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: .3 } }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--panel-2); }
+.seg button { border: 0; background: transparent; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .1); }
+.btn { border: 1px solid var(--line); background: var(--panel); padding: 6px 11px; border-radius: 8px; cursor: pointer; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+a.btn { text-decoration: none; color: inherit; }
+.btn:hover { background: var(--panel-2); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.btn.on { background: var(--accent-soft); border-color: var(--accent-2); color: var(--accent-2); }
+.btn.danger { color: var(--danger); }
+.route { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); overflow: hidden; }
+.route span { padding: 0 2px 0 9px; color: var(--muted); font-family: var(--f-code); font-size: 12px; }
+.route input { border: 0; background: transparent; padding: 5px 8px 5px 2px; width: 150px; font-family: var(--f-code); font-size: 12px; outline: none; }
+
+.main { min-height: 0; display: grid; grid-template-columns: 390px minmax(0, 1fr); overflow: hidden; }
+.chat { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; position: relative; z-index: 2; }
+.log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.msg { padding: 10px 12px; border-radius: 10px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.user { background: var(--accent-soft); align-self: flex-end; max-width: 90%; }
+.msg.ai { background: var(--panel-2); border: 1px solid var(--line); }
+.msg.err { border-color: var(--danger); color: var(--danger); }
+.msg .sel { display: block; margin-top: 6px; font-size: 11.5px; color: var(--accent-2); font-family: var(--f-code); white-space: normal; }
+.tools { display: grid; gap: 3px; margin-top: 8px; font-size: 12px; color: var(--muted); white-space: normal; }
+.tools div { font-family: var(--f-code); font-size: 11.5px; }
+.tools .w { color: var(--ok); }
+.meta { font-size: 11.5px; color: var(--muted); margin-top: 6px; white-space: normal; font-variant-numeric: tabular-nums; }
+.welcome b { display: block; font-size: 15px; margin-bottom: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 10px; cursor: pointer; font-size: 12px; text-align: left; }
+.chip:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.composer { border-top: 1px solid var(--line); padding: 10px 12px 12px; display: grid; gap: 8px; }
+.selchip { display: flex; gap: 8px; align-items: center; font-size: 12px; background: var(--accent-soft); color: var(--accent-2); border-radius: 8px; padding: 6px 9px; }
+.selchip code { font-family: var(--f-code); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.attachments { display: flex; flex-wrap: wrap; gap: 8px; }
+.att { position: relative; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--panel-2); }
+.att img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.att.loading img { opacity: .4; }
+.att button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgb(0 0 0 / .65); color: #fff; font-size: 12px; line-height: 20px; padding: 0; cursor: pointer; }
+.composer.drop { outline: 2px dashed var(--accent-2); outline-offset: -6px; background: var(--accent-soft); }
+.msg .thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.msg .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.selchip button { border: 0; background: none; color: inherit; cursor: pointer; text-decoration: underline; padding: 0; font-size: 12px; }
+textarea#prompt { width: 100%; min-height: 84px; max-height: 240px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--panel-2); line-height: 1.55; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.hint { font-size: 11.5px; color: var(--muted); }
+.history { border-top: 1px solid var(--line); padding: 8px 12px; font-size: 12px; color: var(--muted); }
+.history summary { cursor: pointer; }
+.history ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; max-height: 140px; overflow-y: auto; }
+.history li { display: flex; gap: 8px; align-items: center; }
+.history li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.stage { position: relative; min-width: 0; min-height: 0; overflow: auto; background-color: var(--bg);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 16px 16px;
+  display: flex; justify-content: center; align-items: flex-start; padding: 34px 24px 24px; }
+.monitor { position: relative; flex: none; }
+.monitor-label { position: absolute; top: -22px; left: 0; right: 0; display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.screen { background: #fff; border-radius: 8px; overflow: hidden; transform-origin: top left; box-shadow: 0 1px 3px rgb(0 0 0 / .14), 0 14px 40px rgb(0 0 0 / .14); }
+.screen.phone { border-radius: 28px; border: 10px solid #111; }
+.screen iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.working { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 3; background: var(--fg); color: var(--bg); border-radius: 999px; padding: 6px 14px; font-size: 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 6px 20px rgb(0 0 0 / .2); }
+.working i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); animation: blink 1s infinite; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 12.5px; z-index: 9; }
+.setup { margin: 14px; padding: 12px; border: 1px solid var(--warn); border-radius: 10px; color: var(--fg); background: var(--panel-2); line-height: 1.6; }
+.setup code { font-family: var(--f-code); background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+/* ── 칼럼 탭 ── */
+.colpanel { border-bottom: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 10px; max-height: 52%; overflow-y: auto; background: var(--panel); }
+.colpanel h3 { margin: 0; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.colpanel h3 { flex-wrap: wrap; white-space: nowrap; }
+.colpanel h3 small { color: var(--muted); font-weight: 500; order: 9; flex-basis: 100%; white-space: normal; }
+.colform { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.colform input, .colform textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; background: var(--panel); }
+.colform textarea { min-height: 54px; resize: vertical; }
+.collist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.collist li { border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; cursor: pointer; background: var(--panel); display: grid; gap: 4px; }
+.collist li:hover { border-color: var(--accent-2); }
+.collist li.on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.collist .t { font-weight: 600; line-height: 1.4; }
+.collist .m { font-size: 11.5px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); }
+.badge.pub { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.colactions { display: flex; flex-wrap: wrap; gap: 6px; }
+.holes { font-size: 12px; color: var(--warn); margin: 0; padding-left: 16px; }
+.seobox { border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; display: grid; gap: 6px; background: var(--panel-2); }
+.seobox .chips { margin-top: 0; }
+.badge.need { background: var(--warn); color: #fff; border-color: var(--warn); }
+.publog { font-size: 12px; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+@media (max-width: 900px) {
+  body { overflow: auto; } .app, .main { height: auto; overflow: visible; }
+  .main { grid-template-columns: 1fr; } .chat { border-right: 0; border-bottom: 1px solid var(--line); height: 60vh; }
+  .stage { height: 80vh; }
+}
+@media (prefers-reduced-motion: reduce) { .pill.busy::before, .working i { animation: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><i>아터스</i> 스튜디오</div>
+    <div class="seg" id="modes" role="group" aria-label="작업 종류">
+      <button data-mode="page" aria-pressed="true">페이지</button>
+      <button data-mode="column" aria-pressed="false">칼럼</button>
+    </div>
+    <span class="pill" id="status">확인 중</span>
+    <div class="spacer"></div>
+    <div class="seg" id="devices" role="group" aria-label="기기 크기">
+      <button data-w="1440" aria-pressed="true">데스크톱</button>
+      <button data-w="820" aria-pressed="false">태블릿</button>
+      <button data-w="390" aria-pressed="false">모바일</button>
+    </div>
+    <label class="route" id="routeBox" title="미리볼 주소"><span>/#</span><input id="route" value="/" aria-label="미리볼 주소"></label>
+    <button class="btn" id="reload" title="미리보기 새로고침">새로고침</button>
+    <a class="btn" href="/" target="_blank" rel="noopener">새 탭에서 열기</a>
+  </header>
+
+  <div class="main">
+    <section class="chat" aria-label="채팅">
+      <div class="colpanel" id="colpanel" hidden>
+        <h3>칼럼 <small id="colInfo"></small><span class="spacer"></span>
+          <button class="btn" id="colNewBtn" style="padding:3px 9px;font-size:12px">+ 새 칼럼</button>
+          <button class="btn" id="colPlanBtn" style="padding:3px 9px;font-size:12px" title="Search Console CSV로 주제 추천">주제 추천</button>
+          <label class="btn" style="padding:3px 9px;font-size:12px" title="Search Console › 실적 › 내보내기 CSV">CSV<input type="file" id="gscInput" accept=".csv,text/csv" hidden></label>
+        </h3>
+        <div class="seobox" id="seoBox">
+          <div class="row"><b>SEO 현황</b><span class="hint" id="seoDate">점검 기록 없음</span><span class="spacer"></span>
+            <button class="btn" id="gitPull" style="padding:3px 9px;font-size:12px" hidden title="서버 주간 점검 결과·다른 기기 수정 받기">최신 받기</button>
+            <button class="btn" id="seoCheck" style="padding:3px 9px;font-size:12px">SEO 점검</button></div>
+          <div class="hint" id="seoSummary"></div>
+          <div class="chips" id="seoTopics"></div>
+        </div>
+        <div class="colform" id="colForm" hidden>
+          <input id="colKeyword" placeholder="키워드 · 예: 연극영화과 독백 고르는 법">
+          <textarea id="colNotes" placeholder="(선택) 꼭 넣을 내용, 실제 수업 사례, 강조할 점"></textarea>
+          <div class="row"><span class="hint">리서치 → 원고 → 검수 → 미리보기까지 10–20분 걸립니다.</span><div class="spacer"></div><button class="btn primary" id="colCreate">칼럼 만들기</button></div>
+        </div>
+        <ul class="collist" id="colList"><li class="m">불러오는 중…</li></ul>
+        <div id="colSel" hidden>
+          <div class="colactions">
+            <button class="btn" id="colPreview">미리보기 새로고침</button>
+            <button class="btn" id="colNaver">네이버용 열기</button>
+            <a class="btn" id="colLive" target="_blank" rel="noopener" hidden>사이트에서 보기</a>
+            <button class="btn" id="colRefresh" hidden title="최근 SEO 점검 결과를 근거로 보강">점검 결과로 보강</button>
+            <div class="spacer"></div>
+            <button class="btn danger" id="colUnpublish" hidden>발행 취소</button>
+            <button class="btn primary" id="colPublish">발행</button>
+          </div>
+          <ul class="holes" id="colReasons"></ul>
+          <ul class="holes" id="colHoles"></ul>
+          <div class="publog" id="pubLog" hidden></div>
+        </div>
+      </div>
+      <div class="log" id="log"></div>
+      <div class="composer">
+        <div class="selchip" id="selchip" hidden><span>선택:</span><code id="selText"></code><button id="selClear">해제</button></div>
+        <div class="attachments" id="attachments" hidden></div>
+        <textarea id="prompt" placeholder="바꾸고 싶은 점을 적어 주세요.&#10;예: 히어로 제목을 더 크게, 버튼 색을 금색으로&#10;이미지는 붙여넣기(⌘V)나 끌어다 놓기로 첨부할 수 있습니다."></textarea>
+        <div class="row">
+          <button class="btn" id="pick" title="미리보기에서 요소를 클릭해 대상을 고릅니다">요소 선택</button>
+          <label class="btn" id="attachBtn" title="이미지 첨부 (참고 캡처 또는 사이트에 넣을 사진)">이미지<input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif" multiple hidden></label>
+          <select class="btn" id="model" aria-label="모델" title="Claude Code 모델">
+            <option value="">기본 모델</option>
+            <option value="sonnet">빠르게 (Sonnet)</option>
+            <option value="opus">꼼꼼하게 (Opus)</option>
+          </select>
+          <div class="spacer"></div>
+          <button class="btn danger" id="stop" hidden>중지</button>
+          <button class="btn primary" id="send">보내기</button>
+        </div>
+        <div class="hint">Ctrl/⌘ + Enter로 보내기 · 대화는 이어집니다 <button class="btn" id="newChat" style="padding:2px 8px;font-size:11.5px;margin-left:6px">새 대화</button></div>
+      </div>
+      <details class="history" id="history">
+        <summary>되돌리기 기록</summary>
+        <ul id="snaps"></ul>
+      </details>
+    </section>
+
+    <section class="stage" id="stage" aria-label="미리보기 모니터">
+      <div class="working" id="working" hidden><i></i><span id="workText">Claude가 작업 중…</span></div>
+      <div class="monitor" id="monitor">
+        <div class="monitor-label"><span id="sizeLabel"></span><span id="pickHint" hidden>고칠 요소를 클릭하세요 · Esc 취소</span></div>
+        <div class="screen" id="screen"><iframe id="view" src="/#/" title="사이트 미리보기"></iframe></div>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const view = $('#view');
+let deviceW = 1440, picking = false, selection = null, busy = false, ctl = null;
+let sessionId = null;
+try { sessionId = sessionStorage.getItem('studio-session'); } catch {}
+
+/* ── status ── */
+async function refreshStatus() {
+  try {
+    const r = await fetch('/__studio/api/status'); const s = await r.json();
+    const pill = $('#status');
+    if (s.nested) {
+      pill.className = 'pill bad'; pill.textContent = '새 터미널에서 실행 필요';
+      if (!$('#setup')) {
+        const d = document.createElement('div'); d.className = 'setup'; d.id = 'setup';
+        d.innerHTML = '<b>지금은 채팅이 동작하지 않습니다.</b><br>개발 서버가 Claude Code 안에서 켜져 있어서, 스튜디오가 Claude를 따로 부를 수 없습니다.<br>1. Claude Code 창에서 <code>Ctrl + C</code>로 서버를 끕니다.<br>2. <b style="display:inline;font-size:inherit">새 터미널 창</b>을 열고 프로젝트 폴더에서 <code>npm run dev</code>를 실행합니다.<br>3. 이 화면을 새로고침합니다.';
+        $('#log').prepend(d);
+      }
+    } else if (s.claude && s.loggedIn === false) {
+      pill.className = 'pill bad'; pill.textContent = 'Claude 로그인 필요';
+      if (!$('#setup')) {
+        const d = document.createElement('div'); d.className = 'setup'; d.id = 'setup';
+        d.innerHTML = '<b>Claude Code에 로그인되어 있지 않습니다.</b><br>새 터미널 창에서 <code>claude</code>를 실행해 로그인한 뒤(<code>/exit</code>로 나오기), 이 화면을 새로고침하세요.';
+        $('#log').prepend(d);
+      }
+    } else if (!s.claude) {
+      pill.className = 'pill bad'; pill.textContent = 'Claude Code 없음';
+      if (!$('#setup')) {
+        const d = document.createElement('div'); d.className = 'setup'; d.id = 'setup';
+        d.innerHTML = '<b>Claude Code를 찾지 못했습니다.</b><br>스튜디오는 이 컴퓨터의 Claude Code로 파일을 고칩니다. 터미널에서 설치하고 로그인한 뒤 이 화면을 새로고침하세요.<br><code>npm install -g @anthropic-ai/claude-code</code><br><code>claude</code> (처음 한 번 실행해 로그인)';
+        $('#log').prepend(d);
+      }
+    } else { pill.className = busy ? 'pill busy' : 'pill ok'; pill.textContent = busy ? '작업 중' : s.claude.replace(/\s*\(Claude Code\)/, '') + ' 연결됨'; $('#setup')?.remove(); }
+    renderSnaps(s.snapshots || []);
+  } catch { $('#status').className = 'pill bad'; $('#status').textContent = '개발 서버 연결 끊김'; }
+}
+function renderSnaps(list) {
+  $('#snaps').innerHTML = list.length ? list.map((s) => `<li><span title="${esc(s.label)}">${new Date(+s.id).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} · ${esc(s.label)} 이전</span><button class="btn" data-id="${s.id}" style="padding:2px 8px;font-size:11.5px">이 시점으로</button></li>`).join('') : '<li>아직 기록이 없습니다.</li>';
+  $('#snaps').querySelectorAll('button').forEach((b) => b.onclick = () => undo(b.dataset.id));
+}
+async function undo(id) {
+  if (busy) return;
+  const r = await fetch('/__studio/api/undo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || '되돌리지 못했습니다');
+  renderSnaps(j.snapshots || []); toast('그 요청 이전 상태로 되돌렸습니다'); addMsg('ai', '↩︎ 되돌렸습니다. 미리보기가 다시 불러와집니다.');
+}
+
+/* ── monitor sizing ── */
+function fit() {
+  const stage = $('#stage'), screen = $('#screen'), mon = $('#monitor');
+  const availW = stage.clientWidth - 48, availH = stage.clientHeight - 60;
+  const phone = deviceW <= 400;
+  const frameW = deviceW + (phone ? 20 : 0);
+  const h = phone ? 844 + 20 : Math.max(availH / Math.min(1, availW / frameW), 600);
+  const scale = Math.min(1, availW / frameW, phone ? availH / h : 1);
+  screen.classList.toggle('phone', phone);
+  screen.style.width = frameW + 'px'; screen.style.height = h + 'px';
+  screen.style.transform = `scale(${scale})`;
+  mon.style.width = frameW * scale + 'px'; mon.style.height = h * scale + 'px';
+  $('#sizeLabel').textContent = `${deviceW}px · ${Math.round(scale * 100)}%`;
+}
+new ResizeObserver(fit).observe($('#stage'));
+document.querySelectorAll('#devices button').forEach((b) => b.onclick = () => {
+  deviceW = +b.dataset.w; document.querySelectorAll('#devices button').forEach((x) => x.setAttribute('aria-pressed', x === b)); fit();
+});
+$('#reload').onclick = () => view.contentWindow.location.reload();
+$('#route').addEventListener('keydown', (e) => { if (e.key === 'Enter') { const v = e.target.value.trim() || '/'; view.contentWindow.location.hash = v.startsWith('/') ? v : '/' + v; } });
+
+/* ── element picker (iframe is same-origin) ── */
+let hoverBox = null;
+function frameDoc() { try { return view.contentDocument; } catch { return null; } }
+function ensureBox(d) {
+  if (hoverBox && hoverBox.ownerDocument === d) return hoverBox;
+  hoverBox = d.createElement('div');
+  hoverBox.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #2d5e88;background:rgba(45,94,136,.08);border-radius:3px;transition:all .06s;display:none';
+  const tag = d.createElement('div');
+  tag.style.cssText = 'position:absolute;left:-2px;top:-22px;background:#153956;color:#fff;font:11px/1.6 ui-monospace,monospace;padding:0 6px;border-radius:3px;white-space:nowrap';
+  hoverBox.appendChild(tag);
+  d.body.appendChild(hoverBox);
+  return hoverBox;
+}
+function sourceOf(el) {
+  const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+  let f = key ? el[key] : null;
+  while (f) {
+    if (f._debugSource) {
+      const s = f._debugSource; const file = String(s.fileName || '').replace(/^.*?\/(src\/)/, '$1');
+      return `${file}:${s.lineNumber}`;
+    }
+    f = f._debugOwner || f.return;
+  }
+  return '';
+}
+function componentOf(el) {
+  const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+  let f = key ? el[key] : null;
+  while (f) { const t = f.type; if (typeof t === 'function' && t.name) return t.name; f = f.return; }
+  return '';
+}
+function onMove(e) {
+  const d = frameDoc(); if (!d) return;
+  const el = e.target; if (!el || el === d.body || el === d.documentElement) return;
+  const r = el.getBoundingClientRect(); const box = ensureBox(d);
+  Object.assign(box.style, { display: 'block', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  box.firstChild.textContent = `${componentOf(el) || ''} ‹${el.tagName.toLowerCase()}›`;
+}
+function onClick(e) {
+  e.preventDefault(); e.stopPropagation();
+  const el = e.target; const d = frameDoc();
+  selection = {
+    tag: el.tagName.toLowerCase(), source: sourceOf(el), component: componentOf(el),
+    text: (el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 160),
+    html: el.outerHTML.slice(0, 1500), route: (view.contentWindow.location.hash || '#/').slice(1),
+  };
+  setPicking(false);
+  $('#selchip').hidden = false;
+  $('#selText').textContent = `${selection.component ? selection.component + ' · ' : ''}${selection.source || selection.tag}${selection.text ? ' — “' + selection.text.slice(0, 40) + '”' : ''}`;
+  $('#prompt').focus();
+}
+function onKey(e) { if (e.key === 'Escape') setPicking(false); }
+function setPicking(on) {
+  picking = on; $('#pick').classList.toggle('on', on); $('#pickHint').hidden = !on;
+  const d = frameDoc(); if (!d) return;
+  const fn = on ? 'addEventListener' : 'removeEventListener';
+  d[fn]('mousemove', onMove, true); d[fn]('click', onClick, true); d[fn]('keydown', onKey, true);
+  if (!on && hoverBox) hoverBox.style.display = 'none';
+  d.documentElement.style.cursor = on ? 'crosshair' : '';
+}
+$('#pick').onclick = () => setPicking(!picking);
+$('#selClear').onclick = () => { selection = null; $('#selchip').hidden = true; };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && picking) setPicking(false); });
+view.addEventListener('load', () => { hoverBox = null; if (picking) setPicking(true); try { $('#route').value = (view.contentWindow.location.hash || '#/').slice(1) || '/'; view.contentWindow.addEventListener('hashchange', () => { $('#route').value = view.contentWindow.location.hash.slice(1) || '/'; }); } catch {} });
+
+/* ── chat ── */
+const log = $('#log');
+function addMsg(kind, html) { const m = document.createElement('div'); m.className = 'msg ' + kind; m.innerHTML = html; log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
+function welcome() {
+  const m = addMsg('ai welcome', `<b>무엇을 바꿀까요?</b>미리보기를 보면서 말로 요청하세요. Claude Code가 이 프로젝트의 파일을 직접 고치고, 저장되는 즉시 오른쪽 화면에 반영됩니다. 특정 부분을 고치려면 <b style="display:inline;font-size:inherit">요소 선택</b>으로 먼저 클릭하세요.<div class="chips"></div>`);
+  ['히어로 섹션 배경을 아이보리로 바꾸고 글자를 남색으로', '코치 페이지를 새로 만들어줘. 배준우 대표 코치 카드와 강사진 3명 자리', '모바일에서 상단 메뉴 글자가 너무 작아. 키워줘', '프로그램 페이지에 입시반·재수반·성인반 가격표 만들어줘']
+    .forEach((s) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = s; b.onclick = () => { $('#prompt').value = s; $('#prompt').focus(); }; m.querySelector('.chips').appendChild(b); });
+}
+function toolLabel(name, target) {
+  const verb = { Read: '읽음', Edit: '수정', MultiEdit: '수정', Write: '작성', Glob: '파일 찾기', Grep: '검색' }[name] || name;
+  return `${verb}${target ? ' · ' + target : ''}`;
+}
+/* ── image attachments ── */
+let attachments = []; // {id, file, preview, status: 'loading'|'ready'|'error', path, url, name}
+function renderAttachments() {
+  const box = $('#attachments');
+  box.hidden = !attachments.length;
+  box.innerHTML = attachments.map((a) => `<div class="att ${a.status === 'loading' ? 'loading' : ''}" title="${esc(a.name)}"><img src="${a.preview}" alt="${esc(a.name)}"><button data-id="${a.id}" aria-label="첨부 빼기">×</button></div>`).join('');
+  box.querySelectorAll('button').forEach((b) => b.onclick = () => { attachments = attachments.filter((a) => a.id !== b.dataset.id); renderAttachments(); });
+}
+async function addFiles(files) {
+  for (const file of files) {
+    if (!/^image\//.test(file.type)) { toast('이미지 파일만 첨부할 수 있습니다'); continue; }
+    if (attachments.length >= 8) { toast('이미지는 한 번에 8개까지 첨부할 수 있습니다'); break; }
+    const a = { id: Math.random().toString(36).slice(2), name: file.name || '붙여넣은 이미지.png', preview: URL.createObjectURL(file), status: 'loading' };
+    attachments.push(a); renderAttachments();
+    try {
+      const r = await fetch('/__studio/api/upload', { method: 'POST', headers: { 'Content-Type': file.type, 'X-File-Name': encodeURIComponent(a.name) }, body: file });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || '올리지 못했습니다');
+      Object.assign(a, { status: 'ready', path: j.path, url: j.url });
+    } catch (e) {
+      attachments = attachments.filter((x) => x !== a); toast(e.message || '이미지를 올리지 못했습니다');
+    }
+    renderAttachments();
+  }
+}
+$('#fileInput').onchange = (e) => { addFiles([...e.target.files]); e.target.value = ''; };
+$('#prompt').addEventListener('paste', (e) => {
+  const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
+  if (files.length) { e.preventDefault(); addFiles(files); }
+});
+const composer = document.querySelector('.composer');
+['dragenter', 'dragover'].forEach((t) => composer.addEventListener(t, (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); composer.classList.add('drop'); } }));
+['dragleave', 'drop'].forEach((t) => composer.addEventListener(t, () => composer.classList.remove('drop')));
+composer.addEventListener('drop', (e) => { e.preventDefault(); addFiles([...e.dataTransfer.files]); });
+
+let mode = 'page', curSlug = null, colData = { columns: [] }, seo = {};
+async function send(override) {
+  const prompt = override ? override.prompt : $('#prompt').value.trim();
+  if (busy) return;
+  if (attachments.some((a) => a.status === 'loading')) return toast('이미지를 올리는 중입니다. 잠시 뒤 보내 주세요');
+  const atts = override ? [] : attachments.filter((a) => a.status === 'ready');
+  if (!prompt && !atts.length) return;
+  const sel = override ? null : selection;
+  addMsg('user', esc(override?.label || prompt || '첨부한 이미지를 보고 알맞게 반영해줘.') + (sel ? `<span class="sel">◎ ${esc(sel.source || sel.tag)}${sel.text ? ' — “' + esc(sel.text.slice(0, 50)) + '”' : ''}</span>` : '') +
+    (atts.length ? `<span class="thumbs">${atts.map((a) => `<img src="${a.url}" alt="${esc(a.name)}">`).join('')}</span>` : ''));
+  if (!override) { $('#prompt').value = ''; selection = null; $('#selchip').hidden = true; attachments = []; renderAttachments(); }
+  const ai = addMsg('ai', '<span class="body">생각하는 중…</span><div class="tools"></div><div class="meta"></div>');
+  const bodyEl = ai.querySelector('.body'), toolsEl = ai.querySelector('.tools'), metaEl = ai.querySelector('.meta');
+  let text = '', edited = new Set();
+  setBusy(true);
+  ctl = new AbortController();
+  try {
+    const r = await fetch('/__studio/api/chat', { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, selection: sel, attachments: atts.map(({ path, url, name }) => ({ path, url, name })), sessionId, model: $('#model').value, mode, slug: mode === 'column' ? curSlug : null }) });
+    if (!r.ok || !r.body) { const j = await r.json().catch(() => ({})); throw new Error(j.error || '요청을 보내지 못했습니다'); }
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+        if (ev.kind === 'session') { sessionId = ev.sessionId; try { sessionStorage.setItem('studio-session', sessionId); } catch {} }
+        else if (ev.kind === 'delta') { text += ev.text; bodyEl.textContent = text; log.scrollTop = log.scrollHeight; }
+        else if (ev.kind === 'text') { if (!text.endsWith(ev.text)) { text += (text ? '\n' : '') + ev.text; bodyEl.textContent = text; } text += '\n'; }
+        else if (ev.kind === 'tool') {
+          const d = document.createElement('div'); d.textContent = '· ' + toolLabel(ev.name, ev.target);
+          if (/Edit|Write/.test(ev.name)) { d.className = 'w'; d.textContent = '✎ ' + toolLabel(ev.name, ev.target); edited.add(ev.target); }
+          toolsEl.appendChild(d); $('#workText').textContent = toolLabel(ev.name, ev.target);
+          if (!text) bodyEl.textContent = '작업 중…';
+          log.scrollTop = log.scrollHeight;
+        }
+        else if (ev.kind === 'done') {
+          if (!ev.ok) { ai.classList.add('err'); bodyEl.textContent = (ev.result || 'Claude Code가 요청을 처리하지 못했습니다.') + '\n\n이 문구를 그대로 복사해 도움을 요청하세요.'; }
+          else if (ev.result && !text.trim()) bodyEl.textContent = ev.result;
+          if (ev.sessionId) { sessionId = ev.sessionId; try { sessionStorage.setItem('studio-session', sessionId); } catch {} }
+          metaEl.textContent = `${((ev.ms || 0) / 1000).toFixed(0)}초${edited.size ? ` · 파일 ${edited.size}개 수정` : ' · 수정한 파일 없음'}${ev.costUsd ? ` · 약 $${ev.costUsd.toFixed(3)}` : ''} · 마음에 안 들면 아래 ‘되돌리기 기록’`;
+        }
+        else if (ev.kind === 'error') { ai.classList.add('err'); bodyEl.textContent = (text ? text + '\n\n' : '') + ev.message; }
+      }
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') { ai.classList.add('err'); bodyEl.textContent = e.message || '연결이 끊겼습니다'; }
+    else bodyEl.textContent = (text || '') + '\n(중지했습니다)';
+  } finally { setBusy(false); ctl = null; refreshStatus(); if (mode === 'column') { await loadColumns(); if (curSlug) previewColumn(); } }
+}
+function setBusy(on) {
+  busy = on; $('#send').disabled = on; $('#stop').hidden = !on; $('#working').hidden = !on;
+  if (on) $('#workText').textContent = 'Claude가 작업 중…';
+  refreshStatus();
+}
+$('#send').onclick = () => send();
+$('#stop').onclick = async () => { await fetch('/__studio/api/stop', { method: 'POST' }).catch(() => {}); ctl?.abort(); };
+$('#prompt').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } });
+$('#newChat').onclick = () => { sessionId = null; try { sessionStorage.removeItem('studio-session'); } catch {} log.innerHTML = ''; mode === 'column' ? welcomeColumn() : welcome(); refreshStatus(); toast('새 대화를 시작합니다'); };
+
+/* ── 칼럼 탭 ── */
+function welcomeColumn() {
+  const m = addMsg('ai welcome', `<b>칼럼 작업실</b>위에서 <b style="display:inline;font-size:inherit">+ 새 칼럼</b>으로 키워드를 넣으면 리서치 → 원고 → 검수 → 미리보기까지 진행합니다. 칼럼을 고른 뒤 아래 채팅으로 고칠 점을 말하면 그 칼럼을 수정합니다. 사이트 공개는 <b style="display:inline;font-size:inherit">발행</b> 버튼으로만 됩니다.<div class="chips"></div>`);
+  ['도입부를 고등학생이 공감할 상황으로 바꿔줘', '추천 도서를 한국어 번역서 위주로 다시 찾아줘', '실수 3가지 부분을 표로 정리해줘', '이 칼럼을 네이버 블로그용 변형본으로 만들어줘']
+    .forEach((t) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => { $('#prompt').value = t; $('#prompt').focus(); }; m.querySelector('.chips').appendChild(b); });
+}
+function setMode(m) {
+  if (busy) return toast('작업이 끝난 뒤에 바꿀 수 있습니다');
+  mode = m;
+  document.querySelectorAll('#modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  $('#colpanel').hidden = m !== 'column'; $('#routeBox').hidden = m === 'column'; $('#pick').hidden = m === 'column'; $('#attachBtn').hidden = m === 'column';
+  if (picking) setPicking(false);
+  $('#prompt').placeholder = m === 'column' ? '고른 칼럼에 대한 요청을 적어 주세요.\n예: 예시 장면을 오디션 상황으로 바꿔줘' : '바꾸고 싶은 점을 적어 주세요.\n예: 히어로 제목을 더 크게, 버튼 색을 금색으로\n이미지는 붙여넣기(⌘V)나 끌어다 놓기로 첨부할 수 있습니다.';
+  sessionId = null; try { sessionStorage.removeItem('studio-session'); } catch {}
+  log.innerHTML = '';
+  if (m === 'column') { welcomeColumn(); loadColumns().then(() => { if (curSlug) previewColumn(); else view.src = '/column/'; }); }
+  else { welcome(); view.src = '/#/'; }
+  try { localStorage.setItem('studio-mode', m); } catch {}
+}
+document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
+async function loadColumns() {
+  try {
+    const r = await fetch('/__studio/api/columns'); const j = await r.json();
+    if (!r.ok) throw new Error(j.error);
+    colData = j;
+    seo = await fetch('/__studio/api/seo').then((x) => x.json()).catch(() => ({}));
+    renderSeo(); $('#gitPull').hidden = !j.remote;
+    $('#colInfo').textContent = `${j.columns.length}편${j.gsc ? ' · GSC 데이터 있음' : ''}${j.remote ? '' : j.git ? ' · GitHub 미연결' : ' · git 없음'}`;
+    $('#colList').innerHTML = j.columns.length ? j.columns.map((c) => `<li data-slug="${esc(c.slug)}" class="${c.slug === curSlug ? 'on' : ''}"><span class="t">${esc(c.title)}</span><span class="m">${c.status === 'published' ? '<span class="badge pub">발행됨</span>' : '<span class="badge">초안</span>'}${c.score != null ? `<span class="badge${c.passed ? '' : ' warn'}">검수 ${c.score}</span>` : ''}${c.todos.length ? `<span class="badge warn">채울 자리 ${c.todos.length}</span>` : ''}${!c.author ? '<span class="badge warn">저자 없음</span>' : ''}${(seo.refresh_candidates || []).includes(c.slug) ? '<span class="badge need">보강 필요</span>' : ''}<span>${esc(c.updated || c.date)}</span></span></li>`).join('') : '<li class="m">아직 칼럼이 없습니다. + 새 칼럼으로 시작하세요.</li>';
+    $('#colList').querySelectorAll('li[data-slug]').forEach((li) => li.onclick = () => selectColumn(li.dataset.slug));
+    if (curSlug && !j.columns.some((c) => c.slug === curSlug)) curSlug = null;
+    renderSel();
+  } catch (e) { $('#colList').innerHTML = `<li class="m">${esc(e.message || '칼럼 목록을 불러오지 못했습니다')}</li>`; }
+}
+function renderSel() {
+  const c = colData.columns.find((x) => x.slug === curSlug);
+  $('#colSel').hidden = !c; if (!c) return;
+  $('#colPublish').textContent = c.status === 'published' ? '업데이트 발행' : '발행';
+  $('#colUnpublish').hidden = c.status !== 'published';
+  $('#colLive').hidden = c.status !== 'published'; $('#colLive').href = `/column/${c.slug}/`;
+  const info = (seo.columns || []).find((x) => x.slug === c.slug);
+  $('#colReasons').innerHTML = info && info.reasons.length ? info.reasons.map((r) => `<li>${esc(r)}</li>`).join('') : '';
+  $('#colRefresh').hidden = !(info && info.reasons.length);
+}
+function selectColumn(slug) {
+  curSlug = slug; try { localStorage.setItem('studio-col', slug); } catch {}
+  document.querySelectorAll('#colList li').forEach((li) => li.classList.toggle('on', li.dataset.slug === slug));
+  $('#pubLog').hidden = true; renderSel(); previewColumn();
+}
+async function previewColumn() {
+  if (!curSlug) return;
+  const r = await fetch('/__studio/api/columns/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: curSlug }) });
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || '미리보기를 만들지 못했습니다');
+  view.src = j.url + '?t=' + Date.now();
+  $('#colHoles').innerHTML = (j.holes || []).map((h) => `<li>${esc(h)}</li>`).join('');
+}
+$('#colPreview').onclick = previewColumn;
+function renderSeo() {
+  if (!seo.date) { $('#seoDate').textContent = '점검 기록 없음'; $('#seoSummary').textContent = '서버가 매주 월요일 자동 점검합니다. 지금 점검하려면 SEO 점검을 누르세요.'; $('#seoTopics').innerHTML = ''; return; }
+  $('#seoDate').textContent = `${seo.date} 점검`;
+  const t = seo.column_totals;
+  $('#seoSummary').textContent = `보강 필요 ${seo.refresh_candidates.length}편 · 사이트 문제 ${seo.site_issues.length} · 깨진 링크 ${seo.broken_links.length}${t ? ` · 칼럼 클릭 ${t.clicks} / 노출 ${t.impressions}` : ' · 검색 데이터 없음'}${seo.new_topics.length ? ' · 새 주제 후보:' : ''}`;
+  $('#seoTopics').innerHTML = '';
+  (seo.new_topics || []).slice(0, 4).forEach((tp) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = `${tp.query} (노출 ${tp.impressions})`; b.title = '이 검색어로 새 칼럼'; b.onclick = () => { $('#colForm').hidden = false; $('#colKeyword').value = tp.query; $('#colKeyword').focus(); }; $('#seoTopics').appendChild(b); });
+}
+$('#seoCheck').onclick = async () => {
+  const btn = $('#seoCheck'); btn.disabled = true; btn.textContent = '점검 중…';
+  const r = await fetch('/__studio/api/seo/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ links: true }) });
+  const j = await r.json(); btn.disabled = false; btn.textContent = 'SEO 점검';
+  if (!r.ok) return toast(j.error || '점검하지 못했습니다');
+  seo = j; await loadColumns(); toast('SEO 점검을 마쳤습니다');
+};
+$('#gitPull').onclick = async () => {
+  const r = await fetch('/__studio/api/git/pull', { method: 'POST' }); const j = await r.json();
+  toast(r.ok ? '최신 내용을 받았습니다' : (j.error || '받지 못했습니다')); if (r.ok) { await loadColumns(); if (curSlug) previewColumn(); }
+};
+$('#colRefresh').onclick = () => {
+  const info = (seo.columns || []).find((x) => x.slug === curSlug); if (!info) return;
+  send({ label: `점검 결과로 보강: ${info.title}`, prompt: `content-pipeline 스킬의 refresh ${curSlug} 절차로 이 칼럼을 보강해줘. 근거는 content/reports/latest.json 의 이 칼럼 항목이야:\n- ${info.reasons.join('\n- ')}${info.missing_queries.length ? `\n- 본문에 넣을 검색어: ${info.missing_queries.join(', ')}` : ''}\nslug 와 status 는 그대로, updated 는 오늘로. 발행 상태인 칼럼이면 사이트 반영은 내가 발행 버튼으로 할게.` });
+};
+$('#colNaver').onclick = () => curSlug && window.open(`/__studio/naver/${curSlug}`, '_blank');
+$('#colNewBtn').onclick = () => { $('#colForm').hidden = !$('#colForm').hidden; if (!$('#colForm').hidden) $('#colKeyword').focus(); };
+$('#colCreate').onclick = () => {
+  const kw = $('#colKeyword').value.trim(); if (!kw) return toast('키워드를 적어 주세요');
+  const notes = $('#colNotes').value.trim();
+  $('#colForm').hidden = true; $('#colKeyword').value = ''; $('#colNotes').value = '';
+  curSlug = null;
+  send({ label: `새 칼럼: ${kw}${notes ? '\n' + notes : ''}`, prompt: `content-pipeline 스킬 절차로 다음 키워드의 칼럼을 --auto 로 만들어줘 (브리프 → 원고(status: draft) → 검수 → 미리보기·네이버 파일). 발행은 하지 마.\n키워드: ${kw}${notes ? `\n사용자 메모(반영할 것): ${notes}` : ''}` });
+};
+$('#colPlanBtn').onclick = () => {
+  if (!colData.gsc && !confirm('Search Console 데이터(CSV)가 없습니다. 웹 검색만으로 주제를 추천할까요?\n(CSV 버튼으로 올리면 실제 검색 데이터로 추천합니다)')) return;
+  send({ label: '칼럼 주제 추천', prompt: 'content-plan 스킬 절차로 칼럼 주제를 추천해줘. content/data/gsc.csv 가 있으면 그 데이터로, 없으면 웹 검색으로. content/plan.md 를 만들고, 답에는 추천 주제 3개(키워드 · 이유 · 예상 효과)만 짧게.' });
+};
+$('#gscInput').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const r = await fetch('/__studio/api/columns/gsc', { method: 'POST', headers: { 'Content-Type': 'text/csv' }, body: f });
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || 'CSV를 읽지 못했습니다');
+  toast('Search Console 데이터를 올렸습니다'); addMsg('ai', '📈 Search Console 데이터 분석 완료\n' + esc(j.summary || '')); loadColumns();
+};
+async function publishColumn(un) {
+  const c = colData.columns.find((x) => x.slug === curSlug); if (!c || busy) return;
+  const verb = un ? '발행을 취소' : c.status === 'published' ? '수정 내용을 사이트에 반영' : 'c-art.co.kr/column 에 발행';
+  if (!confirm(`“${c.title}” ${verb}할까요?\n${colData.remote ? 'GitHub에 올리면 Vercel이 자동 배포합니다.' : '(GitHub 미연결: 커밋까지만 합니다)'}`)) return;
+  const btn = un ? $('#colUnpublish') : $('#colPublish'); btn.disabled = true;
+  const r = await fetch('/__studio/api/columns/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: c.slug, unpublish: un }) });
+  const j = await r.json(); btn.disabled = false;
+  $('#pubLog').hidden = false;
+  $('#pubLog').textContent = r.ok ? '✓ ' + (j.steps || []).join('\n✓ ') : (j.error || '실패') + (j.problems ? '\n· ' + j.problems.join('\n· ') : '');
+  await loadColumns(); previewColumn();
+}
+$('#colPublish').onclick = () => publishColumn(false);
+$('#colUnpublish').onclick = () => publishColumn(true);
+
+let tt; function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 2600); }
+
+fit(); refreshStatus();
+try { curSlug = localStorage.getItem('studio-col'); } catch {}
+let startMode = 'page'; try { startMode = localStorage.getItem('studio-mode') || 'page'; } catch {}
+if (startMode === 'column') setMode('column'); else welcome();
+})();
+</script>
+</body>
+</html>

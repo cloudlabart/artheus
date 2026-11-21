@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /coach
+Disallow: /my
+Disallow: /__studio
+
+# AI 검색 수집기 허용 (ChatGPT·Claude·Perplexity 답변에 인용되려면 필요)
+User-agent: GPTBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+
+Sitemap: https://www.c-art.co.kr/sitemap.xml

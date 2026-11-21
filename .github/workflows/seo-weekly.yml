@@ -1,0 +1,77 @@
+# SEO 주간 점검 — 매주 월요일 오전 9시 17분(한국 시간) 자동 실행. Actions 탭에서 직접 실행도 가능.
+# 1) Search Console 데이터 수집(최근 28일 + 그 전 28일)  2) 칼럼 페이지·사이트맵 다시 생성
+# 3) 칼럼별 순위·클릭 변화, 오래된 내용, 깨진 링크 점검 → content/reports/  4) "SEO 주간 리포트" 이슈에 결과 댓글
+# 필요한 Secret(선택): GSC_SA_KEY = Search Console 읽기 권한을 준 서비스 계정 키(JSON). 없으면 검색 성과 없이 나머지만 점검.
+name: SEO 주간 점검
+
+on:
+  schedule:
+    - cron: "17 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: seo-maintenance
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      HAS_GSC: ${{ secrets.GSC_SA_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Search Console 인증
+        id: gauth
+        if: env.HAS_GSC == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GSC_SA_KEY }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/webmasters.readonly
+
+      - name: Search Console 데이터 수집
+        if: env.HAS_GSC == 'true'
+        env:
+          GSC_ACCESS_TOKEN: ${{ steps.gauth.outputs.access_token }}
+        run: |
+          SITE=$(python3 -c "import json;print(json.load(open('content/geo-seo.config.json'))['gsc']['site'])")
+          python3 tools/geo-seo/scripts/gsc_fetch.py --site "$SITE" --days 28 --country kor --out content/data/gsc.csv
+          python3 tools/geo-seo/scripts/gsc_fetch.py --site "$SITE" --days 28 --end-offset 28 --country kor --out content/data/gsc_prev.csv
+
+      - name: 칼럼 페이지·사이트맵 다시 생성
+        run: python3 tools/geo-seo/scripts/build_site.py
+
+      - name: SEO 점검
+        run: python3 tools/geo-seo/scripts/seo_maintain.py --check-links --quiet
+
+      - name: 결과 저장
+        run: |
+          git config user.name "artheus-seo-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/reports content/data public/column public/sitemap.xml public/rss.xml
+          if git diff --cached --quiet; then echo "바뀐 것 없음"; exit 0; fi
+          git commit -m "SEO 주간 점검 $(date +%F)"
+          git pull --rebase --autostash
+          git push
+
+      - name: 리포트 이슈에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPORT=$(ls -t content/reports/seo-*.md | head -1)
+          N=$(gh issue list --label seo-report --state open --json number -q '.[0].number')
+          if [ -z "$N" ]; then
+            gh label create seo-report --color 2D5E88 --description "SEO 정기 점검" 2>/dev/null || true
+            gh issue create --title "SEO 주간 리포트" --label seo-report --body-file "$REPORT"
+          else
+            gh issue comment "$N" --body-file "$REPORT"
+          fi

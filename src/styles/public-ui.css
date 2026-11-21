@@ -1,0 +1,83 @@
+:root {
+  --artheus-deep-blue: #153956;
+  --artheus-blue: #2d5e88;
+  --artheus-light-blue: #a9c5d9;
+  --artheus-sub-blue: #a9c5d9;
+  --artheus-ivory: #f3f0ea;
+  --artheus-ivory-bright: #faf8f4;
+  --artheus-offwhite: #f3f0ea;
+  --artheus-ink: #132b3f;
+  --artheus-muted: #466075;
+  --artheus-hairline: rgba(21, 57, 86, 0.15);
+  --artheus-hairline-on-blue: rgba(243, 240, 234, 0.26);
+}
+
+html {
+  scroll-padding-top: 88px;
+}
+
+.glass-header {
+  background: #f3f0ea;
+  border-bottom: 1px solid rgba(21, 57, 86, 0.14);
+  box-shadow: none;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-header {
+    background: rgba(243, 240, 234, 0.92);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* 폼·인증 페이지 배경: 그라디언트·질감 없이 단정하고 불투명한 아이보리 단색 */
+.hero-bg {
+  background: #f3f0ea !important;
+}
+
+.footer-bg {
+  background: #eae6de;
+}
+
+.keep-ko {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 인물 사진 프레임: 차분한 스튜디오 블루 배경 + 자연스러운 피부색·질감 그대로 보존 (파란 필터 미사용) */
+.artheus-photo-frame {
+  background: linear-gradient(160deg, #153956 0%, #2d5e88 100%);
+}
+.artheus-photo-frame img {
+  filter: none;
+}
+
+/* 레퍼런스 원형 요소처럼 절제된 은은한 블루 번짐 (소수 장식 위치 전용, 본문·가격 뒤 사용 금지) */
+.artheus-halo-orb {
+  background: radial-gradient(
+    circle,
+    rgba(169, 197, 217, 0.34) 0%,
+    rgba(45, 94, 136, 0.14) 46%,
+    transparent 72%
+  );
+}
+
+:focus-visible {
+  outline: 2px solid #2d5e88;
+  outline-offset: 3px;
+}
+
+.on-blue-surface :focus-visible {
+  outline: 2px solid #f3f0ea;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
