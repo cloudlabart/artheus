@@ -80,5 +80,8 @@
     "min_impressions": 20,
     "max_candidates": 5,
     "auto_refresh_per_month": 2
+  },
+  "studio": {
+    "max_jobs": 3
   }
 }

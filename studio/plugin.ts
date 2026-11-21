@@ -10,10 +10,13 @@
  *
  * 칼럼 탭: content/column/<slug>/article.md 를 .claude/skills 의 칼럼 스킬로 만들고(리서치·작성·검수),
  * tools/geo-seo/scripts/build_site.py 로 미리보기·발행 페이지(public/column/)를 만듭니다.
+ * 매니저 탭: 큰 요청을 받아 .claude/agents 의 서브에이전트(리서처·작가·검수·디자이너·SEO 분석가)에게 나눠 맡깁니다.
+ * 요청마다 작업(Job)이 하나씩 생기고 여러 작업이 동시에 돕니다(studio/jobs.ts). 같은 구역은 한 번에 하나만.
  * 공개 발행(git commit·push)은 [발행] 버튼으로만 합니다.
  */
 import type { Plugin, ViteDevServer } from 'vite';
-import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { JobManager, type JobKind } from './jobs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -53,6 +56,25 @@ You are in the COLUMN tab of "아터스 스튜디오". Columns are SEO/GEO artic
 - Never modify studio/ or public/column/ directly. Site React code (src/) is out of scope here unless the user explicitly asks.
 - After changing an article, regenerate its preview: \`${PY} tools/geo-seo/scripts/build_site.py --preview <slug>\` and the Naver file: \`${PY} tools/geo-seo/scripts/publish.py naver content/column/<slug>/article.md\`.
 - Final reply in Korean, short: 무엇을 했는지, 검수 점수, 확인 필요.
+`.trim();
+
+/* 매니저: 큰 요청을 쪼개 서브에이전트에게 맡김 (다른 작업과 동시에 돌지 않는 대신, 안에서 병렬) */
+const MANAGER_TOOLS = [...COLUMN_TOOLS, 'Bash(npm run build)', 'Bash(npm run type-check)'];
+const MANAGER_NOTE = `
+You are "아터스 매니저", the admin agent of 아터스 스튜디오 for the ARTHEUS acting-academy website (c-art.co.kr).
+You coordinate work and delegate to subagents with the Task tool. Available subagents (.claude/agents):
+- seo-researcher: keyword/SERP/AI-answer/Naver research for one keyword
+- content-writer: writes or rewrites a column article.md from a brief
+- geo-reviewer: fact-checks and reviews a column (PASS/FIX/BLOCK)
+- site-designer: edits the React site (src/) following CLAUDE.md design rules
+- seo-analyst: site-wide technical SEO and column performance analysis (reports, no edits)
+Rules:
+- First make a short plan (TodoWrite). Then delegate. Launch INDEPENDENT subagents in parallel (several Task calls in one message), e.g. research for two keywords at once.
+- Never let two subagents edit the same file at the same time. Site edits (src/) go to one site-designer at a time.
+- Columns follow CLAUDE.md and .claude/skills/content-pipeline (status: draft only). Never publish, never set status: published, never run git.
+- After site edits, run \`npm run build\` once to verify. After column edits, run \`${PY} tools/geo-seo/scripts/build_site.py --preview <slug>\`.
+- You run headless: never ask questions; list open questions under "확인 필요".
+- Final reply in Korean, short: 무엇을 누구에게 맡겼고 결과가 무엇인지, 확인 필요.
 `.trim();
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -117,36 +139,45 @@ function json(res: ServerResponse, code: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-/* ── 되돌리기용 스냅샷: 요청마다 src/ 와 index.html 을 복사해 둠 ── */
+/* ── 되돌리기용 스냅샷: 작업마다 "그 작업의 구역"만 복사해 둠 (동시에 도는 다른 작업을 건드리지 않게) ── */
 function snapshotDir(root: string) { return path.join(root, '.studio', 'snapshots'); }
-function takeSnapshot(root: string, label: string) {
-  const dir = path.join(snapshotDir(root), String(Date.now()));
+function takeSnapshot(root: string, label: string, paths: string[], lane: string) {
+  let n = Date.now();
+  while (fs.existsSync(path.join(snapshotDir(root), String(n)))) n++;
+  const id = String(n);
+  const dir = path.join(snapshotDir(root), id);
   fs.mkdirSync(dir, { recursive: true });
-  fs.cpSync(path.join(root, 'src'), path.join(dir, 'src'), { recursive: true });
-  if (fs.existsSync(path.join(root, 'index.html'))) fs.copyFileSync(path.join(root, 'index.html'), path.join(dir, 'index.html'));
-  if (fs.existsSync(path.join(root, 'content'))) fs.cpSync(path.join(root, 'content'), path.join(dir, 'content'), { recursive: true });
-  fs.writeFileSync(path.join(dir, 'label.txt'), label.slice(0, 200));
+  const items = paths.map((p) => {
+    const src = path.join(root, p); const existed = fs.existsSync(src);
+    if (existed) fs.cpSync(src, path.join(dir, 'files', p), { recursive: true });
+    return { p, existed };
+  });
+  fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify({ label: label.slice(0, 200), lane, items }));
   const all = fs.readdirSync(snapshotDir(root)).sort();
-  for (const old of all.slice(0, Math.max(0, all.length - 30))) fs.rmSync(path.join(snapshotDir(root), old), { recursive: true, force: true });
+  for (const old of all.slice(0, Math.max(0, all.length - 40))) fs.rmSync(path.join(snapshotDir(root), old), { recursive: true, force: true });
+  return id;
+}
+function readMeta(dir: string): { label: string; lane: string; items: { p: string; existed: boolean }[] } {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')); }
+  catch { return { label: '', lane: 'manager', items: [] }; }
 }
 function listSnapshots(root: string) {
   const d = snapshotDir(root);
   if (!fs.existsSync(d)) return [];
-  return fs.readdirSync(d).sort().reverse().map((id) => ({
-    id, label: fs.existsSync(path.join(d, id, 'label.txt')) ? fs.readFileSync(path.join(d, id, 'label.txt'), 'utf8') : '',
-  }));
+  return fs.readdirSync(d).sort().reverse().map((id) => { const m = readMeta(path.join(d, id)); return { id, label: m.label, lane: m.lane }; });
 }
 function restoreSnapshot(root: string, id: string) {
   const dir = path.join(snapshotDir(root), id);
   if (!/^\d+$/.test(id) || !fs.existsSync(dir)) throw new Error('snapshot not found');
-  fs.rmSync(path.join(root, 'src'), { recursive: true, force: true });
-  fs.cpSync(path.join(dir, 'src'), path.join(root, 'src'), { recursive: true });
-  if (fs.existsSync(path.join(dir, 'index.html'))) fs.copyFileSync(path.join(dir, 'index.html'), path.join(root, 'index.html'));
-  if (fs.existsSync(path.join(dir, 'content'))) {
-    fs.rmSync(path.join(root, 'content'), { recursive: true, force: true });
-    fs.cpSync(path.join(dir, 'content'), path.join(root, 'content'), { recursive: true });
+  for (const { p, existed } of readMeta(dir).items) {
+    const target = path.join(root, p);
+    fs.rmSync(target, { recursive: true, force: true });
+    if (existed) fs.cpSync(path.join(dir, 'files', p), target, { recursive: true });
   }
   fs.rmSync(dir, { recursive: true, force: true });
+}
+function laneOf(root: string, id: string) {
+  return readMeta(path.join(snapshotDir(root), id)).lane;
 }
 
 function claudeLoggedIn(): Promise<boolean | null> {
@@ -171,7 +202,6 @@ function claudeAvailable(): Promise<string | null> {
 
 export function artheusStudio(): Plugin {
   let server: ViteDevServer;
-  let running: ChildProcess | null = null;
 
   return {
     name: 'artheus-studio', // 아터스 스튜디오
@@ -179,6 +209,11 @@ export function artheusStudio(): Plugin {
     configureServer(s) {
       server = s;
       const root = s.config.root;
+      let maxJobs = 3;
+      try { maxJobs = JSON.parse(fs.readFileSync(path.join(root, 'content', 'geo-seo.config.json'), 'utf8')).studio?.max_jobs || 3; } catch {}
+      const jm = new JobManager(root, s.config.logger, maxJobs);
+      s.httpServer?.once('close', () => jm.stopAll());
+      const busyMsg = (lane: string) => { const j = jm.conflict(lane); return j ? `“${j.title}” 작업이 같은 부분을 고치는 중입니다. 끝난 뒤에 하거나 그 작업을 중지하세요.` : ''; };
 
       s.middlewares.use(async (req, res, next) => {
         const url = (req.url || '').split('?')[0];
@@ -198,15 +233,17 @@ export function artheusStudio(): Plugin {
 
         if (url === '/__studio/api/status') {
           const version = await claudeAvailable();
-          return json(res, 200, { claude: version, loggedIn: version ? await claudeLoggedIn() : null, nested: !!process.env.CLAUDECODE, busy: !!running, snapshots: listSnapshots(root).slice(0, 10) });
+          return json(res, 200, { claude: version, loggedIn: version ? await claudeLoggedIn() : null, nested: !!process.env.CLAUDECODE, busy: jm.running().length, maxJobs: jm.max, snapshots: listSnapshots(root).slice(0, 12) });
         }
 
         if (url === '/__studio/api/undo' && req.method === 'POST') {
-          if (running) return json(res, 409, { error: '작업 중에는 되돌릴 수 없습니다.' });
           const snaps = listSnapshots(root);
           const body = await readBody(req);
           const id = body.id || snaps[0]?.id;
           if (!id) return json(res, 404, { error: '되돌릴 기록이 없습니다.' });
+          if (!/^\d+$/.test(String(id))) return json(res, 400, { error: '잘못된 기록입니다.' });
+          const lane = laneOf(root, id);
+          if (jm.conflict(lane)) return json(res, 409, { error: busyMsg(lane) });
           try { restoreSnapshot(root, id); } catch (e: any) { return json(res, 400, { error: e.message }); }
           if (fs.existsSync(path.join(root, 'content', 'column'))) runPy(root, ['tools/geo-seo/scripts/build_site.py']);
           server.ws.send({ type: 'full-reload' });
@@ -286,16 +323,16 @@ export function artheusStudio(): Plugin {
           return json(res, 200, { ...JSON.parse(fs.readFileSync(path.join(root, '.studio', 'reports', 'latest.json'), 'utf8')), source: 'local' });
         }
         if (url === '/__studio/api/git/pull' && req.method === 'POST') {
-          if (running) return json(res, 409, { error: '작업이 끝난 뒤에 받으세요.' });
+          if (jm.running().length) return json(res, 409, { error: '진행 중인 작업이 끝난 뒤에 받으세요.' });
           if (!runGit(root, ['remote']).out) return json(res, 400, { error: 'GitHub 원격 저장소가 연결되어 있지 않습니다.' });
           const r = runGit(root, ['pull', '--rebase', '--autostash']);
           return json(res, r.ok ? 200 : 500, r.ok ? { ok: true, out: r.out } : { error: r.out.slice(-500) });
         }
 
         if (url === '/__studio/api/columns/publish' && req.method === 'POST') {
-          if (running) return json(res, 409, { error: 'Claude 작업이 끝난 뒤에 발행하세요.' });
           const { slug, unpublish, push } = await readBody(req);
           if (!SLUG_RE.test(String(slug))) return json(res, 400, { error: 'slug가 올바르지 않습니다.' });
+          if (jm.conflict(`column:${slug}`)) return json(res, 409, { error: busyMsg(`column:${slug}`) });
           const file = articlePath(root, slug);
           if (!fs.existsSync(file)) return json(res, 404, { error: '칼럼이 없습니다.' });
           const text = fs.readFileSync(file, 'utf8');
@@ -310,7 +347,7 @@ export function artheusStudio(): Plugin {
             if (problems.length) return json(res, 422, { error: '발행 전에 채워야 할 것이 있습니다.', problems });
             steps.push('검수 통과 · ' + lint.out.split('\n')[0]);
           }
-          takeSnapshot(root, (unpublish ? '발행 취소: ' : '발행: ') + slug);
+          takeSnapshot(root, (unpublish ? '발행 취소: ' : '발행: ') + slug, [path.join('content', 'column', slug)], `column:${slug}`);
           const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
           setFrontmatter(file, 'status', unpublish ? 'draft' : 'published');
           if (!unpublish) setFrontmatter(file, 'updated', today);
@@ -334,30 +371,49 @@ export function artheusStudio(): Plugin {
           return json(res, 200, { ok: true, steps });
         }
 
-        if (url === '/__studio/api/stop' && req.method === 'POST') {
-          running?.kill('SIGTERM');
+        /* ── 작업(Job): 여러 개 동시에 ── */
+        if (url === '/__studio/api/columns/delete' && req.method === 'POST') {
+          const { slug } = await readBody(req);
+          if (!SLUG_RE.test(String(slug)) || !fs.existsSync(articlePath(root, slug))) return json(res, 404, { error: '칼럼이 없습니다.' });
+          if (jm.conflict(`column:${slug}`)) return json(res, 409, { error: busyMsg(`column:${slug}`) });
+          if (/^status:\s*published/m.test(fs.readFileSync(articlePath(root, slug), 'utf8'))) return json(res, 400, { error: '발행된 칼럼은 먼저 발행 취소하세요.' });
+          takeSnapshot(root, '칼럼 삭제: ' + slug, [path.join('content', 'column', slug)], `column:${slug}`);
+          fs.rmSync(path.join(root, 'content', 'column', slug), { recursive: true, force: true });
+          fs.rmSync(path.join(root, '.studio', 'preview', slug), { recursive: true, force: true });
           return json(res, 200, { ok: true });
         }
-
-        if (url === '/__studio/api/chat' && req.method === 'POST') {
-          if (running) return json(res, 409, { error: '이전 요청이 아직 진행 중입니다.' });
+        if (url === '/__studio/api/jobs' && req.method === 'GET') {
+          return json(res, 200, { jobs: jm.list(), running: jm.running().length, max: jm.max });
+        }
+        const jm1 = url.match(/^\/__studio\/api\/jobs\/([a-z0-9]+)(\/stop)?$/);
+        if (jm1) {
+          const id = jm1[1];
+          if (jm1[2] && req.method === 'POST') return json(res, jm.stop(id) ? 200 : 404, { ok: true });
+          const since = Number(new URL(req.url || '', 'http://x').searchParams.get('since') || 0);
+          const j = jm.get(id); const events = jm.eventsSince(id, since);
+          if (!j || !events) return json(res, 404, { error: '작업이 없습니다.' });
+          return json(res, 200, { job: jm.summary(j), events });
+        }
+        if (url === '/__studio/api/jobs' && req.method === 'POST') {
           const body = await readBody(req);
-          const attachments = (Array.isArray(body.attachments) ? body.attachments : [])
+          const kind: JobKind = ['page', 'column', 'manager'].includes(body.kind) ? body.kind : 'page';
+          const slug = kind === 'column' && SLUG_RE.test(String(body.slug || '')) ? String(body.slug) : '';
+          const lane = kind === 'manager' ? 'manager' : kind === 'page' ? 'site' : slug ? `column:${slug}` : body.lane === 'seo' ? 'seo' : `new:${Date.now().toString(36)}`;
+          if (jm.conflict(lane)) return json(res, 409, { error: busyMsg(lane) });
+          if (jm.running().length >= jm.max) return json(res, 429, { error: `동시에 ${jm.max}개까지 돌릴 수 있습니다. 하나가 끝난 뒤에 보내세요.` });
+
+          const attachments = kind === 'page' ? (Array.isArray(body.attachments) ? body.attachments : [])
             .filter((a: any) => typeof a?.path === 'string' && /^public\/uploads\/[^/\\]+$/.test(a.path) && fs.existsSync(path.join(root, a.path)))
-            .slice(0, 8);
+            .slice(0, 8) : [];
           const prompt = String(body.prompt || '').trim() || (attachments.length ? '첨부한 이미지를 보고 알맞게 반영해줘.' : '');
           if (!prompt) return json(res, 400, { error: '요청 내용이 비어 있습니다.' });
 
-          const column = body.mode === 'column';
-          const colSlug = column && SLUG_RE.test(String(body.slug || '')) ? String(body.slug) : '';
-          let full = column
-            ? `[스튜디오 작업 지침 — 반드시 따를 것]\n${COLUMN_NOTE}\n\n${colSlug ? `[현재 칼럼]\ncontent/column/${colSlug}/article.md\n\n` : ''}[사용자 요청]\n${prompt}`
-            : `[스튜디오 작업 지침 — 반드시 따를 것]\n${SYSTEM_NOTE}\n\n[사용자 요청]\n${prompt}`;
-          if (body.selection) {
+          const note = kind === 'manager' ? MANAGER_NOTE : kind === 'column' ? COLUMN_NOTE : SYSTEM_NOTE;
+          let full = `[스튜디오 작업 지침 — 반드시 따를 것]\n${note}\n\n${slug ? `[현재 칼럼]\ncontent/column/${slug}/article.md\n\n` : ''}[사용자 요청]\n${prompt}`;
+          if (kind === 'page' && body.selection) {
             const sel = body.selection;
             full += `\n\n[미리보기에서 선택한 요소]\n위치: ${sel.source || '알 수 없음'}\n화면 경로: ${sel.route || '/'}\n태그: ${sel.tag}\n글자: ${sel.text || ''}\nHTML 일부: ${String(sel.html || '').slice(0, 1200)}`;
           }
-
           if (attachments.length) {
             full += `\n\n[첨부 이미지 ${attachments.length}개]\n` + attachments.map((a: any, i: number) =>
               `${i + 1}. 파일: ${a.path} (사이트에서 쓰는 주소: ${a.url})${a.name ? ` · 원래 이름: ${String(a.name).slice(0, 80)}` : ''}`).join('\n') +
@@ -366,62 +422,19 @@ export function artheusStudio(): Plugin {
               `- 사이트에 넣을 사진·로고(“이 사진 넣어줘”)이면 <img src="${attachments[0].url}"> 처럼 위 주소로 넣고, 알맞은 alt를 한국어로 쓰세요.`;
           }
 
-          takeSnapshot(root, prompt);
+          const scope = kind === 'manager' ? ['src', 'index.html', 'content'] : kind === 'page' ? ['src', 'index.html'] : slug ? [path.join('content', 'column', slug)] : [];
+          const snapshotId = scope.length ? takeSnapshot(root, String(body.title || prompt), scope, lane) : undefined;
 
+          const tools = kind === 'manager' ? MANAGER_TOOLS : kind === 'column' ? COLUMN_TOOLS : ALLOWED_TOOLS;
           const args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
-            '--permission-mode', 'acceptEdits', '--allowedTools', (column ? COLUMN_TOOLS : ALLOWED_TOOLS).join(',')];
+            '--permission-mode', 'acceptEdits', '--allowedTools', tools.join(',')];
           if (body.sessionId && /^[\w-]+$/.test(body.sessionId)) args.push('--resume', body.sessionId);
           if (body.model && /^[\w.-]+$/.test(body.model)) args.push('--model', body.model);
 
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
-          res.setHeader('Cache-Control', 'no-cache');
-          const send = (o: unknown) => res.write(JSON.stringify(o) + '\n');
-
-          const child = spawn('claude', args, { cwd: root, shell: process.platform === 'win32', env: process.env });
-          running = child;
-          child.stdin?.end(full);
-
-          let buf = '';
-          child.stdout?.on('data', (chunk) => {
-            buf += chunk;
-            let i;
-            while ((i = buf.indexOf('\n')) >= 0) {
-              const line = buf.slice(0, i).trim();
-              buf = buf.slice(i + 1);
-              if (!line) continue;
-              let ev: any;
-              try { ev = JSON.parse(line); } catch { continue; }
-              if (ev.type === 'system' && ev.subtype === 'init') send({ kind: 'session', sessionId: ev.session_id, model: ev.model });
-              else if (ev.type === 'stream_event' && ev.event?.type === 'content_block_delta' && ev.event.delta?.type === 'text_delta') send({ kind: 'delta', text: ev.event.delta.text });
-              else if (ev.type === 'assistant') {
-                for (const b of ev.message?.content || []) {
-                  if (b.type === 'tool_use') {
-                    const fp = b.input?.file_path || b.input?.path || '';
-                    const other = b.input?.pattern || b.input?.query || b.input?.url || b.input?.description || b.input?.skill || String(b.input?.command || '').replace(/^python3?\s+tools\/geo-seo\/scripts\//, '');
-                    send({ kind: 'tool', name: b.name, target: fp ? path.relative(root, path.resolve(root, String(fp))) || String(fp) : String(other || '').slice(0, 120) });
-                  } else if (b.type === 'text') send({ kind: 'text', text: b.text });
-                }
-              } else if (ev.type === 'result') {
-                send({ kind: 'done', ok: !ev.is_error, sessionId: ev.session_id, result: ev.result, costUsd: ev.total_cost_usd, ms: ev.duration_ms });
-              }
-            }
-          });
-          let errText = '';
-          child.stderr?.on('data', (c) => (errText += c));
-          child.on('error', (e) => { s.config.logger.error(`[아터스 스튜디오] Claude Code 실행 실패: ${e.message}`); send({ kind: 'error', message: `Claude Code를 실행하지 못했습니다: ${e.message}` }); });
-          child.on('close', (code) => {
-            running = null;
-            if (code !== 0 && code !== null) {
-              const nested = /inside another Claude Code session|CLAUDECODE/i.test(errText);
-              s.config.logger.error(`[아터스 스튜디오] Claude Code 오류 (코드 ${code}):\n${errText.trim().slice(-2000)}`);
-              send({ kind: 'error', message: nested ? NESTED_MSG : (errText.trim().slice(-600) || `Claude Code가 코드 ${code}로 끝났습니다.`) });
-            }
-            if (code === null) send({ kind: 'error', message: '중지했습니다.' });
-            res.end();
-          });
-          req.on('close', () => { if (!res.writableEnded) child.kill('SIGTERM'); });
-          return;
+          const title = String(body.title || prompt).replace(/\s+/g, ' ').slice(0, 60);
+          const j = jm.start({ kind, title, lane, slug: slug || undefined, userText: String(body.label || prompt), prompt: full, args, model: body.model, snapshotId,
+            onExit: (job) => { if (job.kind !== 'page') server.ws.send({ type: 'custom', event: 'studio:job-done', data: { id: job.id } }); } });
+          return json(res, 200, { id: j.id, lane });
         }
 
         return json(res, 404, { error: 'not found' });

@@ -8,10 +8,10 @@
 - `src/app/components/` — Header, Footer, QuickMenu, InstagramConsultButton 등.
 - `src/styles/` — `theme.css`(토큰), `public-ui.css`(브랜드 색), `fonts.css`.
 - `utils/supabase/info.tsx` — 기존 Supabase 연결 정보(공개 anon 키).
-- `studio/` — 아터스 스튜디오(개발 서버 전용, 페이지·칼럼 탭). 사이트 작업 중에는 고치지 않는다.
+- `studio/` — 아터스 스튜디오(개발 서버 전용, 페이지·칼럼·매니저 탭, 동시 작업은 `studio/jobs.ts`). 사이트 작업 중에는 고치지 않는다.
 - `content/column/<slug>/article.md` — 칼럼 원고(frontmatter `status: draft|published`). `content/geo-seo.config.json` — 브랜드·저자·청중·칼럼 디자인 설정.
 - `public/column/`, `public/sitemap.xml`, `public/rss.xml` — `python3 tools/geo-seo/scripts/build_site.py`가 만드는 칼럼 발행본. 직접 고치지 않는다.
-- `.claude/skills/content-*`, `.claude/agents/` — 칼럼 기획·작성·검수·발행 스킬. `tools/geo-seo/` — 스크립트와 작성 기준.
+- `.claude/skills/content-*` — 칼럼 기획·작성·검수·발행 스킬. `.claude/agents/` — 서브에이전트(seo-researcher, content-writer, geo-reviewer, site-designer, seo-analyst). `tools/geo-seo/` — 스크립트와 작성 기준.
 
 ## 디자인 규칙
 - 색: 아이보리 `#F3F0EA`(배경), `#FAF8F4`(카드), 딥블루 `#153956`, 블루 `#2D5E88`, 라이트블루 `#A9C5D9`, 잉크 `#132B3F`, 본문 회청색 `#35526B`.
@@ -31,3 +31,4 @@
 - 발행(`status: published` + git push)은 사용자가 명시적으로 요청했을 때만, `content-publish` 스킬 절차대로.
 - 정기 SEO: `.github/workflows/seo-weekly.yml`(주간 점검 → `content/reports/latest.json`), `seo-refresh.yml`(월간 보강 → PR). 보강 요청을 받으면 `content/reports/latest.json`의 해당 칼럼 `reasons`·`missing_queries`를 근거로 삼는다.
 - 배포: GitHub Pages(`.github/workflows/deploy-pages.yml`). 저장소가 공개라 Search Console 숫자·CSV는 커밋하지 않는다(`content/data/`는 gitignore, 서버 리포트는 `--public`).
+- 큰 요청(여러 칼럼, 사이트+칼럼 함께)은 서브에이전트에게 나눠 맡기고, 서로 독립적인 일은 Task 호출을 한 번에 여러 개 보내 동시에 돌린다. 같은 파일을 두 서브에이전트가 동시에 고치게 하지 않는다.
