@@ -56,7 +56,9 @@
 | 칼럼 현행화 (`.github/workflows/seo-refresh.yml`) | 매월 1일 10:37 | 점검의 "보강 필요" 상위 2편을 Claude가 보강 → **PR** 생성 | PR을 병합해야 반영 |
 
 **처음 한 번 설정 (GitHub 저장소 › Settings › Secrets and variables › Actions › New repository secret)**
-1. `ANTHROPIC_API_KEY` — https://console.anthropic.com 에서 발급. 칼럼 현행화에 필요(사용량만큼 과금).
+1. 칼럼 현행화용 Claude 열쇠 (둘 중 하나):
+   - `CLAUDE_CODE_OAUTH_TOKEN` — Claude Pro/Max 구독으로 쓰기. Mac 터미널에서 `claude setup-token` → 브라우저 승인 → 나온 토큰을 넣기(구독 사용량에서 차감, 추가 결제 없음).
+   - `ANTHROPIC_API_KEY` — https://console.anthropic.com 에서 발급(쓴 만큼 별도 과금).
 2. `GSC_SA_KEY` (선택이지만 권장) — 검색 성과 점검용.
    - Google Cloud 콘솔에서 프로젝트 생성 → **Google Search Console API** 사용 설정 → 서비스 계정 만들기 → 키(JSON) 생성.
    - Search Console › 설정 › 사용자 및 권한 › 사용자 추가 → 서비스 계정 이메일을 **제한됨** 권한으로 추가.

@@ -1,7 +1,7 @@
 # 칼럼 현행화 — 매월 1일 오전 10시 37분(한국 시간) 자동 실행. Actions 탭에서 칼럼을 지정해 직접 실행도 가능.
 # 최신 SEO 점검(content/reports/latest.json)의 보강 추천 칼럼을 Claude가 보강하고, 바로 배포하지 않고 PR(검토 요청)로 올립니다.
 # PR을 확인하고 병합(Merge)해야 사이트에 반영됩니다.
-# 필요한 Secret: ANTHROPIC_API_KEY (console.anthropic.com 에서 발급)
+# 필요한 Secret (둘 중 하나): CLAUDE_CODE_OAUTH_TOKEN (Claude Pro/Max 구독 — Mac 터미널에서 `claude setup-token`) 또는 ANTHROPIC_API_KEY (console.anthropic.com)
 name: 칼럼 현행화
 
 on:
@@ -49,6 +49,8 @@ jobs:
         if: steps.pick.outputs.slugs != ''
         uses: anthropics/claude-code-action@v1
         with:
+          # 둘 중 하나만 있으면 됩니다: Claude 구독 토큰(claude setup-token) 또는 콘솔 API 키
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             아터스 칼럼 현행화 작업입니다. 대상 칼럼: ${{ steps.pick.outputs.slugs }}
