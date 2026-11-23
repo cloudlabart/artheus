@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아터스 스튜디오</title>
+<link rel="stylesheet" href="/__studio/kit/kit.css">
+<style>
+html, body { height: 100%; overflow: hidden; }
+.shell { position: fixed; inset: 0; display: grid; grid-template-columns: 76px minmax(0, 1fr); }
+.main { overflow: hidden; }
+.rail { background: var(--accent); color: #fff; display: flex; flex-direction: column; align-items: stretch; padding: 10px 6px; gap: 2px; overflow-y: auto; }
+.logo { font-weight: 900; letter-spacing: .12em; font-size: 11px; text-align: center; padding: 6px 0 12px; opacity: .95; }
+.rail .grp { font-size: 9.5px; letter-spacing: .08em; opacity: .55; text-align: center; margin: 10px 0 2px; }
+.rail button { border: 0; background: transparent; color: #fff; border-radius: 12px; padding: 7px 2px 6px; cursor: pointer; display: grid; justify-items: center; gap: 2px; font-size: 10.5px; opacity: .8; }
+.rail button span { font-size: 18px; line-height: 1; }
+.rail button:hover { background: rgb(255 255 255 / .1); opacity: 1; }
+.rail button.on { background: rgb(255 255 255 / .18); opacity: 1; }
+.main { display: grid; grid-template-rows: auto 1fr; min-width: 0; min-height: 0; }
+.topbar { display: flex; align-items: flex-end; gap: 8px; background: var(--panel-2); border-bottom: 1px solid var(--line); padding: 6px 10px 0; min-width: 0; }
+.tabs { display: flex; gap: 2px; min-width: 0; overflow-x: auto; flex: 1; scrollbar-width: none; }
+.tab { flex: 0 1 190px; min-width: 110px; display: flex; align-items: center; gap: 7px; padding: 7px 8px 7px 12px; border-radius: 10px 10px 0 0; background: transparent; border: 1px solid transparent; border-bottom: 0; cursor: pointer; font-size: 13px; color: var(--muted); position: relative; }
+.tab:hover { background: rgb(255 255 255 / .35); }
+.tab.on { background: var(--bg); color: var(--fg); border-color: var(--line); margin-bottom: -1px; font-weight: 600; }
+.tab .ic { flex: none; }
+.tab .tt { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.tab .x { flex: none; border: 0; background: transparent; width: 20px; height: 20px; border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; }
+.tab .x:hover { background: var(--line); color: var(--fg); }
+.plus { border: 0; background: transparent; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; font-size: 18px; color: var(--muted); margin-bottom: 3px; }
+.plus:hover { background: var(--line); }
+.tools { display: flex; gap: 6px; align-items: center; padding-bottom: 5px; flex: none; }
+.chip { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel); color: var(--muted); cursor: pointer; white-space: nowrap; }
+.chip.live { color: var(--warn); border-color: var(--warn); }
+.stage { position: relative; min-height: 0; background: var(--bg); }
+.stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+.launcher { position: absolute; inset: 0; overflow: auto; }
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.app { border: 1px solid var(--line); background: var(--panel); border-radius: 16px; padding: 16px; cursor: pointer; display: grid; gap: 6px; text-align: left; }
+.app:hover { border-color: var(--accent-2); }
+.app b { font-size: 15px; } .app span { font-size: 24px; } .app small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (max-width: 700px) { .shell { grid-template-columns: 58px minmax(0, 1fr); } .rail button { font-size: 9.5px; } .tab { min-width: 90px; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="앱"></nav>
+  <div class="main">
+    <div class="topbar">
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <button class="plus" id="plus" title="새 탭 (앱 목록)">＋</button>
+      <div class="tools">
+        <span class="chip" id="jobsChip" title="진행 중인 AI 작업">AI 작업 0</span>
+        <button class="chip" id="popout" title="이 탭을 새 창으로">↗ 새 창</button>
+      </div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="launcher" id="launcher" hidden>
+        <div class="page"><div class="head"><h1>앱</h1><span class="sub">눌러서 탭으로 열고, ↗ 새 창으로 떼어 낼 수 있어요.</span></div><div class="apps" id="apps"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+const APPS = [
+  { id: 'home', icon: '🏠', name: '홈', grp: '운영', desc: '오늘 상담·예약·미납·AI 작업 한눈에' },
+  { id: 'crm', icon: '👥', name: 'CRM', grp: '운영', desc: '문의자·원생 연락처와 단계 관리' },
+  { id: 'consult', icon: '🗓', name: '상담', grp: '운영', desc: '상담 일정·기록·후속 연락' },
+  { id: 'booking', icon: '🅽', name: '네이버 예약', grp: '운영', desc: '스마트플레이스 예약 현황' },
+  { id: 'billing', icon: '💳', name: '수강료', grp: '운영', desc: '청구·납부·미납 관리' },
+  { id: 'kakao', icon: '💬', name: '카카오', grp: '소통', desc: '카카오톡 채널 알림톡 발송' },
+  { id: 'instagram', icon: '📷', name: '인스타', grp: '소통', desc: '계정 성과·게시물' },
+  { id: 'youtube', icon: '▶️', name: '유튜브', grp: '소통', desc: '채널·영상 성과' },
+  { id: 'work', icon: '🛠', name: '작업실', grp: '콘텐츠', desc: '홈페이지 디자인·칼럼(SEO)·매니저 에이전트', url: '/__studio/work' },
+  { id: 'webzine', icon: '🗞', name: '웹진', grp: '콘텐츠', desc: '인스타 캐러셀 카드뉴스 만들기' },
+  { id: 'ads', icon: '🎬', name: '광고 영상', grp: '콘텐츠', desc: '대본·장면 → 세로 영상 만들기' },
+  { id: 'settings', icon: '⚙️', name: '설정', grp: '설정', desc: '연동 키·백업·개인정보' },
+];
+const byId = Object.fromEntries(APPS.map((a) => [a.id, a]));
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let tabs = [], active = null;
+const frames = new Map();
+
+function urlOf(app, params = {}) {
+  const base = byId[app].url || `/__studio/app/${app}`;
+  const q = new URLSearchParams(params).toString();
+  return q ? `${base}?${q}` : base;
+}
+function save() { try { localStorage.setItem('shell', JSON.stringify({ tabs: tabs.map((t) => t.app), active })); } catch {} }
+function render() {
+  let grp = '';
+  $('#rail').innerHTML = '<div class="logo">ARTHEUS<br>STUDIO</div>' + APPS.map((a) => {
+    const g = a.grp !== grp ? `<div class="grp">${a.grp}</div>` : ''; grp = a.grp;
+    return `${g}<button data-app="${a.id}" class="${tabs.some((t) => t.app === a.id && t.app === active) ? 'on' : ''}" title="${esc(a.desc)}"><span>${a.icon}</span>${esc(a.name)}</button>`;
+  }).join('');
+  document.querySelectorAll('#rail button').forEach((b) => (b.onclick = () => openApp(b.dataset.app)));
+  $('#tabs').innerHTML = tabs.map((t) => `<div class="tab ${t.app === active ? 'on' : ''}" role="tab" data-app="${t.app}" title="${esc(byId[t.app].name)}"><span class="ic">${byId[t.app].icon}</span><span class="tt">${esc(t.title || byId[t.app].name)}</span><button class="x" data-x="${t.app}" aria-label="닫기">×</button></div>`).join('');
+  document.querySelectorAll('.tab').forEach((el) => (el.onclick = (e) => { if (e.target.dataset.x) closeTab(e.target.dataset.x); else focus(el.dataset.app); }));
+  for (const [app, fr] of frames) fr.hidden = app !== active;
+  $('#launcher').hidden = active !== null;
+  $('#popout').hidden = !active;
+  document.title = active ? `${byId[active].name} · 아터스 스튜디오` : '아터스 스튜디오';
+}
+function openApp(app, params) {
+  if (!byId[app]) return;
+  if (!tabs.some((t) => t.app === app)) {
+    tabs.push({ app });
+    const fr = document.createElement('iframe');
+    fr.src = urlOf(app, params || {}); fr.title = byId[app].name;
+    $('#stage').appendChild(fr); frames.set(app, fr);
+  } else if (params && Object.keys(params).length) {
+    frames.get(app)?.contentWindow?.postMessage({ type: 'studio:params', params }, location.origin);
+  }
+  focus(app);
+}
+function focus(app) { active = app; save(); render(); }
+function closeTab(app) {
+  const i = tabs.findIndex((t) => t.app === app); if (i < 0) return;
+  tabs.splice(i, 1); frames.get(app)?.remove(); frames.delete(app);
+  if (active === app) active = tabs[Math.max(0, i - 1)]?.app || null;
+  save(); render();
+}
+$('#plus').onclick = () => { active = null; save(); render(); };
+$('#popout').onclick = () => { if (!active) return; const fr = frames.get(active); window.open(fr?.contentWindow?.location.href || urlOf(active), '_blank', 'width=1280,height=860'); };
+$('#apps').innerHTML = APPS.map((a) => `<button class="app" data-app="${a.id}"><span>${a.icon}</span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></button>`).join('');
+document.querySelectorAll('.app').forEach((b) => (b.onclick = () => openApp(b.dataset.app)));
+
+window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin) return;
+  const d = e.data || {};
+  if (d.type === 'studio:open') openApp(d.app, d.params);
+  if (d.type === 'studio:title') { const t = tabs.find((x) => frames.get(x.app)?.contentWindow === e.source); if (t) { t.title = d.title; render(); } }
+});
+
+async function pollJobs() {
+  try {
+    const r = await fetch('/__studio/api/jobs'); const d = await r.json();
+    const c = $('#jobsChip'); c.textContent = `AI 작업 ${d.running}`; c.className = 'chip' + (d.running ? ' live' : '');
+    c.title = d.jobs.filter((j) => j.status === 'running').map((j) => j.title).join('\n') || '진행 중인 AI 작업 없음';
+  } catch {}
+  setTimeout(pollJobs, 3000);
+}
+$('#jobsChip').onclick = () => openApp('work');
+
+let saved = {}; try { saved = JSON.parse(localStorage.getItem('shell') || '{}'); } catch {}
+const start = (saved.tabs && saved.tabs.length ? saved.tabs : ['home']).filter((a) => byId[a]);
+for (const a of start) { tabs.push({ app: a }); const fr = document.createElement('iframe'); fr.src = urlOf(a); fr.title = byId[a].name; $('#stage').appendChild(fr); frames.set(a, fr); }
+active = byId[saved.active] && start.includes(saved.active) ? saved.active : start[0] || null;
+render(); pollJobs();
+})();
+</script>
+</body>
+</html>

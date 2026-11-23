@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카카오톡 채널</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1>카카오톡 채널</h1><span id="conn"></span><span class="spacer"></span>
+    <a class="btn" href="https://center-pf.kakao.com" target="_blank" rel="noopener">채널 관리자센터 ↗</a>
+    <button class="btn" id="tplAdd">+ 템플릿</button></div>
+  <div id="notice"></div>
+  <div class="grid g2">
+    <div class="card"><h2>1. 메시지</h2>
+      <select class="in" id="tpl"></select>
+      <textarea class="in" id="text" style="min-height:150px"></textarea>
+      <div class="help">바꿔 넣는 말: #{이름} #{날짜} #{시간} #{과정} #{금액} #{월} #{학원}. 알림톡은 카카오 검수를 통과한 템플릿 문구와 똑같아야 발송됩니다.</div>
+      <input class="in" id="tplId" placeholder="알림톡 템플릿 코드 (솔라피에 등록된 templateId)">
+    </div>
+    <div class="card"><h2>2. 받는 사람</h2>
+      <div class="row"><select class="in" id="seg" style="width:auto"><option value="pick">직접 고르기</option><option value="tomorrow">내일 상담 예정자</option><option value="today">오늘 상담 예정자</option><option value="unpaid">미납자 (기한 지남)</option><option value="stage">단계별</option></select>
+        <select class="in" id="stage" style="width:auto" hidden></select>
+        <select class="in" id="to" style="width:auto"><option value="auto">보호자 우선</option><option value="student">학생</option><option value="guardian">보호자만</option></select></div>
+      <input class="in" id="pickQ" placeholder="이름으로 찾아 추가">
+      <div id="pickRes" class="row"></div>
+      <div class="small muted" id="recvSum"></div>
+    </div>
+  </div>
+  <div class="card"><h2>3. 미리보기 <small id="pvSum"></small></h2><div id="preview"></div>
+    <div class="row"><span class="spacer"></span><button class="btn" id="copyAll">복사로 보내기</button><button class="btn primary" id="send">알림톡 발송</button></div></div>
+  <div class="card"><h2>보낸 기록</h2><div id="log"></div></div>
+</div>
+<script>
+const { $, $$, esc, db, toast, form, ymd, fmtTime, fmtDate, fmtDT, addDays, won, phone, copy } = K;
+const T = db('templates'), C = db('contacts'), CS = db('consults'), INV = db('invoices'), M = db('messages');
+const SEED = [
+  { name: '상담 예약 안내', text: '[아터스] #{이름}님, 상담이 예약되었어요.\n일시: #{날짜} #{시간}\n장소: 아터스 연기학원\n준비할 것은 없어요. 궁금한 점은 이 채팅으로 남겨 주세요.' },
+  { name: '상담 전날 리마인드', text: '[아터스] #{이름}님, 내일 #{시간} 상담 잊지 않으셨죠?\n일정 변경이 필요하면 이 채팅으로 알려 주세요.' },
+  { name: '수강료 안내', text: '[아터스] #{이름}님 #{월} 수강료 안내드려요.\n금액: #{금액}\n납부 기한: #{날짜}\n늘 함께해 주셔서 감사합니다.' },
+  { name: '미납 안내', text: '[아터스] #{이름}님, #{월} 수강료 #{금액}이 아직 확인되지 않았어요.\n이미 납부하셨다면 이 메시지는 넘겨 주세요. 확인이 필요하면 채팅으로 알려 주세요.' },
+];
+let templates = [], contacts = [], consults = [], invoices = [], picked = new Map(), connected = false, academy = '아터스';
+const paid = (i) => (i.payments || []).reduce((s, p) => s + (+p.amount || 0), 0);
+
+async function load() {
+  [templates, contacts, consults, invoices] = await Promise.all([T.list(), C.list(), CS.list(), INV.list()]);
+  if (!templates.length) { for (const t of SEED) await T.add(t); templates = await T.list(); }
+  try { const s = await K.integrations(); connected = s.status.kakao; academy = s.config?.academy?.name || academy; } catch {}
+  $('#conn').innerHTML = connected ? '<span class="badge ok">알림톡 발송 연결됨 (솔라피)</span>' : '<span class="badge warn">발송 미연결 · 복사로 보내기만 가능</span>';
+  $('#notice').innerHTML = connected ? '' : `<div class="notice">카카오톡 채널은 외부 프로그램이 1:1 채팅을 대신 보낼 수 없어서, 공식 <b>알림톡</b>(검수된 템플릿 문구)을 발송 대행사(솔라피) API로 보냅니다. <a href="#" id="toSettings">설정 › 카카오</a>에서 키를 넣으면 이 화면에서 바로 발송돼요. 연결 전에는 메시지를 복사해 채널 채팅에 붙여넣으세요.</div>`;
+  const ts = $('#toSettings'); if (ts) ts.onclick = (e) => { e.preventDefault(); K.open('settings'); };
+  $('#tpl').innerHTML = templates.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('') + '<option value="">(직접 쓰기)</option>';
+  $('#stage').innerHTML = K.STAGES.map((s) => `<option>${s}</option>`).join('');
+  applyTpl(); renderLog();
+}
+function applyTpl() { const t = templates.find((x) => x.id === $('#tpl').value); if (t) { $('#text').value = t.text; $('#tplId').value = t.templateId || ''; } preview(); }
+function recipients() {
+  const seg = $('#seg').value; const now = new Date();
+  const dayOf = (n) => ymd(addDays(now, n));
+  if (seg === 'pick') return [...picked.values()].map((c) => ({ c }));
+  if (seg === 'tomorrow' || seg === 'today') {
+    const d = dayOf(seg === 'today' ? 0 : 1);
+    return consults.filter((x) => x.status === '예정' && ymd(x.datetime) === d).map((x) => ({ c: contacts.find((c) => c.id === x.contactId) || { name: x.name }, cs: x }));
+  }
+  if (seg === 'unpaid') return invoices.filter((i) => i.status !== '완납' && paid(i) < i.amount && i.dueDate && i.dueDate < ymd()).map((i) => ({ c: contacts.find((c) => c.id === i.contactId) || { name: i.name }, inv: i }));
+  if (seg === 'stage') return contacts.filter((c) => c.stage === $('#stage').value).map((c) => ({ c }));
+  return [];
+}
+function toNumber(c) {
+  const mode = $('#to').value;
+  if (mode === 'student') return c.phone; if (mode === 'guardian') return c.guardianPhone;
+  return c.guardianPhone || c.phone;
+}
+function fill(text, r) {
+  const v = { 이름: r.c.name || '', 과정: r.c.program || '', 학원: academy,
+    날짜: r.cs ? fmtDate(r.cs.datetime) : r.inv ? r.inv.dueDate : '', 시간: r.cs ? fmtTime(r.cs.datetime) : '',
+    금액: r.inv ? won(r.inv.amount - paid(r.inv)) : r.c.fee ? won(r.c.fee) : '', 월: r.inv ? `${+r.inv.month.slice(5)}월` : `${new Date().getMonth() + 1}월` };
+  return { text: text.replace(/#\{(.+?)\}/g, (_, k) => v[k] ?? ''), variables: Object.fromEntries(Object.entries(v).map(([k, x]) => [`#{${k}}`, x])) };
+}
+let rows = [];
+function preview() {
+  $('#stage').hidden = $('#seg').value !== 'stage';
+  $('#pickQ').hidden = $('#pickRes').hidden = $('#seg').value !== 'pick';
+  const text = $('#text').value;
+  rows = recipients().map((r) => ({ ...r, to: phone(toNumber(r.c) || ''), ...fill(text, r) }));
+  const noNum = rows.filter((r) => !r.to).length;
+  $('#recvSum').textContent = `${rows.length}명${noNum ? ` · 번호 없음 ${noNum}명(제외)` : ''}`;
+  $('#pvSum').textContent = rows.length ? `${rows.length}건` : '';
+  $('#preview').innerHTML = rows.length ? `<div class="list">${rows.slice(0, 30).map((r, i) => `<div class="item" style="align-items:flex-start"><div style="min-width:110px"><div class="t">${esc(r.c.name)}</div><div class="s">${esc(r.to || '번호 없음')}</div></div><div class="small" style="white-space:pre-wrap;flex:1">${esc(r.text)}</div><button class="btn sm" data-cp="${i}">복사</button></div>`).join('')}</div>${rows.length > 30 ? `<div class="small muted">외 ${rows.length - 30}명</div>` : ''}` : '<div class="muted small">받는 사람을 고르면 사람마다 채워진 문구가 보입니다.</div>';
+  $$('[data-cp]').forEach((b) => (b.onclick = () => copy(rows[+b.dataset.cp].text)));
+  $('#send').disabled = !connected || !rows.some((r) => r.to);
+  $('#copyAll').disabled = !rows.length;
+  $('#pickRes').innerHTML = [...picked.values()].map((c) => `<span class="badge blue">${esc(c.name)} <a href="#" data-rm="${c.id}">×</a></span>`).join('');
+  $$('[data-rm]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); picked.delete(a.dataset.rm); preview(); }));
+}
+async function renderLog() {
+  const log = (await M.list()).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 30);
+  K.table($('#log'), log, [{ label: '보낸 때', render: (m) => fmtDT(m.at) }, { label: '받는 사람', k: 'name' }, { label: '방법', render: (m) => m.channel === 'kakao' ? '알림톡' : '복사' }, { label: '내용', render: (m) => `<span class="small">${esc(m.text.slice(0, 60))}</span>` }]);
+}
+$('#tpl').onchange = applyTpl;
+['#text', '#seg', '#stage', '#to'].forEach((s) => $(s).addEventListener(s === '#text' ? 'input' : 'change', preview));
+$('#pickQ').oninput = () => {
+  const q = $('#pickQ').value.trim(); if (!q) return preview();
+  const hits = contacts.filter((c) => c.name.includes(q)).slice(0, 6);
+  $('#pickRes').innerHTML = hits.map((c) => `<button class="btn sm" data-add="${c.id}">+ ${esc(c.name)} ${K.stageBadge(c.stage)}</button>`).join('');
+  $$('[data-add]').forEach((b) => (b.onclick = () => { picked.set(b.dataset.add, contacts.find((c) => c.id === b.dataset.add)); $('#pickQ').value = ''; preview(); }));
+};
+$('#send').onclick = async () => {
+  const list = rows.filter((r) => r.to);
+  const tplId = $('#tplId').value.trim();
+  if (!tplId && !confirm('템플릿 코드가 비어 있습니다. 알림톡은 검수된 템플릿만 발송돼요. 그래도 보낼까요?')) return;
+  if (!confirm(`${list.length}명에게 알림톡을 보냅니다. 비용이 발생할 수 있어요. 보낼까요?`)) return;
+  try {
+    const r = await K.api('/__studio/api/kakao/send', { method: 'POST', body: { templateId: tplId, messages: list.map((x) => ({ to: x.to, text: x.text, variables: x.variables, contactId: x.c.id, name: x.c.name })) } });
+    toast(`${r.count}건 발송 요청 완료`); renderLog();
+  } catch (e) { toast(e.message); }
+};
+$('#copyAll').onclick = async () => {
+  await copy(rows.map((r) => `▶ ${r.c.name} (${r.to || '번호 없음'})\n${r.text}`).join('\n\n'));
+  for (const r of rows) await M.add({ channel: 'copy', contactId: r.c.id, name: r.c.name, text: r.text, at: new Date().toISOString() });
+  renderLog();
+};
+$('#tplAdd').onclick = async () => {
+  const v = await form({ title: '새 템플릿', fields: [{ k: 'name', label: '이름', required: true }, { k: 'templateId', label: '알림톡 템플릿 코드 (있으면)' }, { k: 'text', label: '문구', type: 'textarea', required: true, ph: '#{이름}님, …' }] });
+  if (!v) return; const t = await T.add(v); templates.push(t); await load(); $('#tpl').value = t.id; applyTpl();
+};
+window.onParams = (p) => {
+  if (p.contactId) { const c = contacts.find((x) => x.id === p.contactId); if (c) { $('#seg').value = 'pick'; picked = new Map([[c.id, c]]); } }
+  if (p.segment) $('#seg').value = p.segment;
+  if (p.segment === 'unpaid') { const t = templates.find((x) => x.name === '미납 안내'); if (t) $('#tpl').value = t.id; applyTpl(); }
+  if (p.text) { $('#tpl').value = ''; $('#text').value = p.text; }
+  preview();
+};
+load().then(() => window.onParams(Object.fromEntries(new URLSearchParams(location.search))));
+</script></body></html>

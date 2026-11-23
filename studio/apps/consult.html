@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상담</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script>
+<style>
+.week { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 8px; overflow-x: auto; }
+.day { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: grid; gap: 6px; align-content: start; min-height: 200px; }
+.day.today { border-color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent-2); }
+.day h3 { margin: 0; font-size: 12.5px; color: var(--muted); }
+.ev { border-radius: 9px; padding: 6px 8px; background: var(--soft); font-size: 12.5px; cursor: pointer; display: grid; gap: 1px; }
+.ev.완료 { background: var(--ok-soft); } .ev.노쇼, .ev.취소 { background: var(--danger-soft); text-decoration: line-through; }
+</style></head>
+<body><div class="page">
+  <div class="head"><h1>상담</h1><span class="sub" id="sum"></span><span class="spacer"></span>
+    <div class="seg" id="view"><button data-v="today" aria-pressed="true">오늘</button><button data-v="week" aria-pressed="false">주간</button><button data-v="all" aria-pressed="false">전체</button></div>
+    <button class="btn primary" id="add">+ 상담 등록</button></div>
+  <div id="weeknav" class="row" hidden><button class="btn sm" id="prev">‹ 이전 주</button><b id="range"></b><button class="btn sm" id="next">다음 주 ›</button><button class="btn sm" id="thisweek">이번 주</button></div>
+  <div id="out"></div>
+</div>
+<script>
+const { $, $$, esc, db, form, drawer, toast, ymd, fmtDT, fmtTime, fmtDate, addDays, phone, PROGRAMS, open, ai, copy } = K;
+const CS = db('consults'), C = db('contacts');
+const TYPES = ['방문 상담', '전화 상담', '온라인(줌)', '인스타 DM', '카카오톡'];
+const STATUS = ['예정', '완료', '노쇼', '취소'];
+const RESULTS = ['', '등록 결정', '고민 중', '다른 학원', '보류'];
+let consults = [], contacts = [], view = 'today', weekStart = monday(new Date());
+function monday(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+const nameOf = (c) => c.contactId ? (contacts.find((x) => x.id === c.contactId)?.name || c.name || '?') : (c.name || '?');
+
+async function load() { [consults, contacts] = await Promise.all([CS.list(), C.list()]); consults.sort((a, b) => String(a.datetime).localeCompare(String(b.datetime))); render(); }
+function render() {
+  const now = new Date(); const t = consults.filter((c) => ymd(c.datetime) === ymd(now));
+  const upcoming = consults.filter((c) => c.status === '예정' && new Date(c.datetime) >= now);
+  const follow = consults.filter((c) => c.followUpDate && c.followUpDate <= ymd(now) && !c.followedUp);
+  $('#sum').textContent = `오늘 ${t.length}건 · 예정 ${upcoming.length}건${follow.length ? ` · 후속 연락 ${follow.length}건` : ''}`;
+  $('#weeknav').hidden = view !== 'week';
+  if (view === 'today') {
+    $('#out').innerHTML = `<div class="grid g2"><div class="card"><h2>오늘 상담 <small>${fmtDate(now)}</small></h2>${list(t)}</div>
+      <div class="card"><h2>후속 연락할 사람 <small>후속일이 지난 상담</small></h2>${list(follow, true)}</div>
+      <div class="card"><h2>다가오는 상담</h2>${list(upcoming.filter((c) => ymd(c.datetime) !== ymd(now)).slice(0, 10))}</div></div>`;
+  } else if (view === 'week') {
+    $('#range').textContent = `${fmtDate(weekStart)} – ${fmtDate(addDays(weekStart, 6))}`;
+    $('#out').innerHTML = `<div class="week">${[...Array(7)].map((_, i) => { const d = addDays(weekStart, i); const evs = consults.filter((c) => ymd(c.datetime) === ymd(d));
+      return `<div class="day ${ymd(d) === ymd(now) ? 'today' : ''}"><h3>${fmtDate(d)}</h3>${evs.map((c) => `<div class="ev ${c.status}" data-id="${c.id}"><b>${fmtTime(c.datetime)} ${esc(nameOf(c))}</b><span class="muted">${esc(c.type || '')}</span></div>`).join('')}</div>`; }).join('')}</div>`;
+    $$('.ev').forEach((el) => (el.onclick = () => detail(consults.find((c) => c.id === el.dataset.id))));
+  } else {
+    K.table($('#out'), [...consults].reverse(), [
+      { label: '일시', render: (c) => fmtDT(c.datetime) }, { label: '이름', render: (c) => `<b>${esc(nameOf(c))}</b>` },
+      { label: '유형', k: 'type' }, { label: '과정', k: 'program' },
+      { label: '상태', render: (c) => `<span class="badge ${c.status === '완료' ? 'ok' : c.status === '예정' ? 'blue' : 'danger'}">${esc(c.status)}</span>` },
+      { label: '결과', k: 'result' }, { label: '후속일', k: 'followUpDate' },
+    ], detail);
+  }
+  $$('#out .item[data-id]').forEach((el) => (el.onclick = () => detail(consults.find((c) => c.id === el.dataset.id))));
+}
+function list(arr, follow) {
+  if (!arr.length) return '<div class="muted small">없습니다.</div>';
+  return `<div class="list">${arr.map((c) => `<div class="item click" data-id="${c.id}"><span class="when">${follow ? esc(c.followUpDate.slice(5)) : fmtTime(c.datetime)}</span><div><div class="t">${esc(nameOf(c))} <span class="badge">${esc(c.type || '')}</span></div><div class="s">${esc(c.program || '')}${c.notes ? ' · ' + esc(c.notes.slice(0, 40)) : ''}</div></div><span class="spacer"></span><span class="badge ${c.status === '완료' ? 'ok' : c.status === '예정' ? 'blue' : 'danger'}">${esc(c.status)}</span></div>`).join('')}</div>`;
+}
+function fields(c) {
+  const names = contacts.map((x) => x.name);
+  return [
+    { k: 'contactName', label: '이름 (CRM에 있으면 그 사람으로 연결)', required: true, ph: names.slice(0, 3).join(', ') },
+    { k: 'phone', label: '연락처 (새 사람일 때)', type: 'tel' },
+    { k: 'datetime', label: '일시', type: 'datetime-local', required: true, default: `${ymd()}T${String(new Date().getHours() + 1).padStart(2, '0')}:00` },
+    { k: 'type', label: '유형', type: 'select', options: TYPES },
+    { k: 'program', label: '관심 과정', type: 'select', options: ['', ...PROGRAMS] },
+    { k: 'status', label: '상태', type: 'select', options: STATUS, default: '예정' },
+    { k: 'result', label: '결과', type: 'select', options: RESULTS },
+    { k: 'followUpDate', label: '후속 연락일', type: 'date' },
+    { k: 'notes', label: '상담 메모', type: 'textarea', ph: '현재 실력, 목표 학교, 고민, 일정 제약, 보호자 의견…' },
+  ];
+}
+async function edit(c, preset = {}) {
+  const values = c ? { ...c, contactName: nameOf(c), datetime: String(c.datetime || '').slice(0, 16) } : preset;
+  const v = await form({ title: c ? '상담 수정' : '상담 등록', fields: fields(c), values, danger: c ? '삭제' : null });
+  if (!v) return;
+  if (v.__delete) { await CS.del(c.id); toast('삭제했습니다'); return load(); }
+  let contact = contacts.find((x) => x.id === (c?.contactId || preset.contactId)) || contacts.find((x) => x.name === v.contactName && (!v.phone || x.phone === phone(v.phone) || x.guardianPhone === phone(v.phone)));
+  if (!contact) {
+    if (!v.phone && !confirm('연락처 없이 새 사람으로 등록할까요?')) return;
+    contact = await C.add({ name: v.contactName, phone: phone(v.phone), stage: '상담예약', program: v.program, source: preset.source || '' });
+    toast('CRM에 새 연락처를 만들었습니다');
+  }
+  const rec = { contactId: contact.id, name: contact.name, datetime: v.datetime, type: v.type, program: v.program, status: v.status, result: v.result, followUpDate: v.followUpDate, notes: v.notes, bookingId: preset.bookingId || c?.bookingId };
+  const saved = c ? await CS.put(c.id, rec) : await CS.add(rec);
+  // CRM 단계 자동 갱신
+  const order = K.STAGES; const cur = order.indexOf(contact.stage);
+  let next = null;
+  if (v.status === '예정' && cur < order.indexOf('상담예약')) next = '상담예약';
+  if (v.status === '완료' && cur < order.indexOf('상담완료')) next = '상담완료';
+  if (v.result === '등록 결정' && cur < order.indexOf('등록')) next = '등록';
+  if (v.result === '다른 학원') next = '이탈';
+  if (next) { await C.put(contact.id, { stage: next, program: contact.program || v.program }); toast(`${contact.name}: ${next}`); }
+  await load(); detail(saved);
+}
+async function detail(c) {
+  if (!c) return;
+  const ct = contacts.find((x) => x.id === c.contactId);
+  const d = drawer(`<div class="row"><h3>${esc(nameOf(c))}</h3><span class="badge">${esc(c.status)}</span><span class="spacer"></span><button class="btn sm" data-a="edit">수정</button></div>
+    <div class="card small"><div><b>${fmtDT(c.datetime)}</b> · ${esc(c.type || '')} · ${esc(c.program || '')}</div>
+      ${ct ? `<div>연락처 ${esc(phone(ct.phone || ct.guardianPhone))} · 단계 ${K.stageBadge(ct.stage)}</div>` : ''}
+      ${c.result ? `<div>결과: <b>${esc(c.result)}</b></div>` : ''}${c.followUpDate ? `<div>후속 연락일: ${esc(c.followUpDate)}${c.followedUp ? ' (완료)' : ''}</div>` : ''}
+      <div style="white-space:pre-wrap">${esc(c.notes || '메모 없음')}</div></div>
+    <div class="row"><button class="btn sm" data-a="done">✓ 완료로</button><button class="btn sm" data-a="noshow">노쇼</button>${c.followUpDate && !c.followedUp ? '<button class="btn sm" data-a="followed">후속 연락함</button>' : ''}<span class="spacer"></span>${ct ? '<button class="btn sm" data-a="crm">CRM</button>' : ''}</div>
+    <div class="card"><h2>후속 메시지 초안 <small>AI · 개인정보는 보내지 않아요</small></h2><div id="aiOut" class="small muted">상담 메모를 바탕으로 카카오톡 안내 문구를 만듭니다.</div><div class="row"><button class="btn sm primary" data-a="ai">초안 만들기</button></div></div>`);
+  const q = (s) => d.el.querySelector(s);
+  q('[data-a=edit]').onclick = () => { d.close(); edit(c); };
+  q('[data-a=done]').onclick = async () => { await CS.put(c.id, { status: '완료' }); d.close(); edit({ ...c, status: '완료' }); };
+  q('[data-a=noshow]').onclick = async () => { await CS.put(c.id, { status: '노쇼' }); d.close(); toast('노쇼로 표시'); load(); };
+  const fu = q('[data-a=followed]'); if (fu) fu.onclick = async () => { await CS.put(c.id, { followedUp: true }); d.close(); load(); };
+  const crm = q('[data-a=crm]'); if (crm) crm.onclick = () => K.open('crm', { id: c.contactId });
+  q('[data-a=ai]').onclick = async (e) => {
+    e.target.disabled = true; const out = q('#aiOut'); out.innerHTML = '<span class="spin"></span> 작성 중…';
+    try {
+      const r = await ai('followup', { type: c.type, program: c.program, notes: c.notes }, (s) => (out.innerHTML = `<span class="spin"></span> ${esc(s)}`));
+      const name = (ct?.name || c.name || '').replace(/^(.)(.*)$/, '$1$2');
+      out.innerHTML = ['short', 'long'].map((k) => `<div class="notice" style="white-space:pre-wrap">${esc(String(r[k] || '').replaceAll('#{이름}', name))}</div><div class="row"><button class="btn sm" data-copy="${k}">복사</button><button class="btn sm" data-send="${k}">💬 카카오로</button></div>`).join('') + (r.nextAction ? `<div class="small">다음 행동: ${esc(r.nextAction)}</div>` : '');
+      out.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = () => copy(String(r[b.dataset.copy]).replaceAll('#{이름}', name))));
+      out.querySelectorAll('[data-send]').forEach((b) => (b.onclick = () => K.open('kakao', { contactId: c.contactId, text: r[b.dataset.send] })));
+    } catch (err) { out.textContent = err.message; }
+    e.target.disabled = false;
+  };
+}
+$('#add').onclick = () => edit(null);
+$$('#view button').forEach((b) => (b.onclick = () => { view = b.dataset.v; $$('#view button').forEach((x) => x.setAttribute('aria-pressed', x === b)); render(); }));
+$('#prev').onclick = () => { weekStart = addDays(weekStart, -7); render(); };
+$('#next').onclick = () => { weekStart = addDays(weekStart, 7); render(); };
+$('#thisweek').onclick = () => { weekStart = monday(new Date()); render(); };
+window.onParams = (p) => {
+  if (p.new) { const ct = contacts.find((x) => x.id === p.contactId); edit(null, { contactId: p.contactId, contactName: ct?.name || p.name || '', phone: p.phone || '', datetime: p.datetime || undefined, program: ct?.program || p.program || '', source: p.source || '', bookingId: p.bookingId }); }
+  else if (p.id) detail(consults.find((c) => c.id === p.id));
+};
+load().then(() => window.onParams(Object.fromEntries(new URLSearchParams(location.search))));
+</script></body></html>

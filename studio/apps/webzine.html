@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>웹진</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script><script src="/__studio/kit/draw.js"></script>
+<style>
+.wrap { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; align-items: start; }
+.slides { display: grid; gap: 10px; }
+.sl { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; }
+.sl canvas { width: 170px; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
+.sl .f2 { display: grid; gap: 6px; }
+.sl .f2 input, .sl .f2 textarea, .sl .f2 select { font-size: 13px; }
+.sl textarea.in { min-height: 64px; }
+@media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .sl { grid-template-columns: 1fr; } }
+</style></head>
+<body><div class="page">
+  <div class="head"><h1>웹진</h1><span class="sub">인스타그램 캐러셀(1080×1350) 카드뉴스</span><span class="spacer"></span><button class="btn primary" id="new">+ 새 웹진</button></div>
+  <div class="wrap">
+    <div class="card"><h2>목록</h2><div id="list" class="list"></div></div>
+    <div id="editor"><div class="empty">왼쪽에서 웹진을 고르거나 새로 만드세요. 칼럼 하나를 고르면 AI가 7–9장짜리 캐러셀로 정리해 줍니다.</div></div>
+  </div>
+</div>
+<script>
+const { $, $$, esc, db, toast, form, ai, copy, download, fmtDate, api } = K;
+const W = db('webzines');
+const TYPES = { cover: '표지', body: '본문', list: '목록', quote: '인용', cta: '마무리' };
+let items = [], cur = null, saveT;
+
+async function load() { items = (await W.list()).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))); renderList(); }
+function renderList() {
+  $('#list').innerHTML = items.length ? items.map((w) => `<div class="item click ${cur?.id === w.id ? 'on' : ''}" data-id="${w.id}" style="${cur?.id === w.id ? 'border-color:var(--accent)' : ''}"><div><div class="t">${esc(w.title || '제목 없음')}</div><div class="s">${w.slides?.length || 0}장 · ${fmtDate(w.updatedAt)}</div></div></div>`).join('') : '<div class="muted small">아직 없습니다.</div>';
+  $$('#list .item').forEach((el) => (el.onclick = () => openW(items.find((w) => w.id === el.dataset.id))));
+}
+
+/* 그리기: 1080×1350 */
+async function draw(canvas, s, i, n, theme) {
+  const t = D.THEMES[theme] || D.THEMES.ivory; const W = 1080, H = 1350, P = 96, mw = W - P * 2;
+  canvas.width = W; canvas.height = H; const c = canvas.getContext('2d');
+  c.fillStyle = t.bg; c.fillRect(0, 0, W, H);
+  let y = P;
+  const img = await D.loadImage(s.image);
+  if (img && s.type !== 'cover') { D.cover(c, img, 0, 0, W, 560); y = 560 + 64; }
+  if (img && s.type === 'cover') { D.cover(c, img, 0, 0, W, H); const g = c.createLinearGradient(0, H * 0.35, 0, H); g.addColorStop(0, 'rgba(19,43,63,0)'); g.addColorStop(1, 'rgba(19,43,63,.92)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  const fg = img && s.type === 'cover' ? '#FAF8F4' : t.fg, sub = img && s.type === 'cover' ? '#DFE8EF' : t.sub;
+  // 머리·꼬리
+  if (!img || s.type === 'cover') D.text(c, 'ARTHEUS', P, 64, { size: 26, weight: 700, color: img && s.type === 'cover' ? '#FAF8F4' : t.accent, maxW: mw });
+  D.text(c, 'artheus · 연기 입시 웹진', P, H - 96, { size: 26, weight: 400, color: sub, maxW: mw });
+  D.text(c, `${i + 1} / ${n}`, W - P, H - 96, { size: 26, weight: 600, color: sub, align: 'right', maxW: 200 });
+  if (s.type === 'cover') {
+    const bodyH = s.body ? D.measure(c, s.body, { size: 40, maxW: mw, lh: 1.5 }) : 0;
+    const titleH = D.measure(c, s.title, { size: 92, weight: 700, maxW: mw, lh: 1.22 });
+    let yy = img ? H - 200 - bodyH - titleH - 60 : 360;
+    if (s.kicker) { D.text(c, s.kicker, P, yy - 70, { size: 34, weight: 600, color: img ? '#A9C5D9' : t.accent, maxW: mw }); }
+    c.fillStyle = img ? '#A9C5D9' : t.accent; c.fillRect(P, yy - 18, 120, 10);
+    yy = D.text(c, s.title, P, yy + 20, { size: 92, weight: 700, color: fg, maxW: mw, lh: 1.22, maxLines: 5 });
+    if (s.body) D.text(c, s.body, P, yy + 30, { size: 40, color: sub, maxW: mw, lh: 1.5, maxLines: 4 });
+    if (!img) D.text(c, '옆으로 넘겨 보세요 →', P, H - 180, { size: 30, weight: 600, color: t.accent, maxW: mw });
+    return;
+  }
+  if (s.kicker) y = D.text(c, s.kicker, P, y + (img ? 0 : 60), { size: 32, weight: 600, color: t.accent, maxW: mw }) + 18;
+  else if (!img) y += 60;
+  if (s.type === 'quote') {
+    D.text(c, '“', P - 10, y - 20, { size: 220, weight: 700, color: t.accent, maxW: 300, lh: 1 });
+    y = D.text(c, s.title, P, y + 170, { size: 60, weight: 600, color: t.fg, maxW: mw, lh: 1.4, maxLines: 7 });
+    if (s.body) D.text(c, s.body, P, y + 30, { size: 34, color: t.sub, maxW: mw, lh: 1.5, maxLines: 4 });
+    return;
+  }
+  if (s.title) y = D.text(c, s.title, P, y, { size: s.type === 'cta' ? 72 : 62, weight: 700, color: t.fg, maxW: mw, lh: 1.3, maxLines: 4 }) + 34;
+  if (s.type === 'list') {
+    const its = (s.items || []).filter(Boolean).slice(0, 5);
+    for (const [k, it] of its.entries()) {
+      c.fillStyle = t.accent; c.beginPath(); c.arc(P + 28, y + 30, 28, 0, Math.PI * 2); c.fill();
+      D.text(c, String(k + 1), P + 28, y + 10, { size: 32, weight: 700, color: t.on, align: 'center', maxW: 60 });
+      y = Math.max(y + 70, D.text(c, it, P + 80, y + 4, { size: 38, weight: 400, color: t.fg, maxW: mw - 80, lh: 1.45, maxLines: 3 })) + 22;
+    }
+    if (s.body) D.text(c, s.body, P, y + 6, { size: 32, color: t.sub, maxW: mw, lh: 1.5, maxLines: 3 });
+    return;
+  }
+  if (s.body) y = D.text(c, s.body, P, y, { size: 40, color: t.sub, maxW: mw, lh: 1.6, maxLines: img ? 6 : 12 }) + 40;
+  if (s.type === 'cta') {
+    const label = '@artheus_act DM 상담';
+    c.font = `700 40px ${D.FONT}`; const bw = c.measureText(label).width + 96;
+    c.fillStyle = t.accent; D.rrect(c, P, y + 10, bw, 96, 48); c.fill();
+    D.text(c, label, P + bw / 2, y + 36, { size: 40, weight: 700, color: t.on, align: 'center', maxW: bw });
+    D.text(c, '저장해 두고 연습할 때 꺼내 보세요', P, y + 150, { size: 32, color: t.sub, maxW: mw });
+  }
+}
+
+function openW(w) {
+  cur = JSON.parse(JSON.stringify(w)); renderList();
+  $('#editor').innerHTML = `<div class="grid" style="gap:12px">
+    <div class="card"><div class="row"><input class="in" id="title" value="${esc(cur.title || '')}" placeholder="웹진 제목(관리용)" style="flex:1">
+      <div class="seg" id="theme">${Object.entries(D.THEMES).map(([k, t]) => `<button data-t="${k}" aria-pressed="${(cur.theme || 'ivory') === k}">${t.name}</button>`).join('')}</div></div>
+      <textarea class="in" id="caption" placeholder="게시물 본문(캡션)">${esc(cur.caption || '')}</textarea>
+      <input class="in" id="tags" value="${esc((cur.hashtags || []).join(' '))}" placeholder="#해시태그">
+      <div class="row"><button class="btn" id="cap">캡션+태그 복사</button><button class="btn" id="add">+ 장 추가</button><span class="spacer"></span><button class="btn danger" id="del">삭제</button><button class="btn primary" id="zip">이미지 전체 받기 (ZIP)</button></div></div>
+    <div class="slides" id="slides"></div></div>`;
+  $('#title').oninput = (e) => { cur.title = e.target.value; queueSave(); };
+  $('#caption').oninput = (e) => { cur.caption = e.target.value; queueSave(); };
+  $('#tags').oninput = (e) => { cur.hashtags = e.target.value.split(/\s+/).filter(Boolean); queueSave(); };
+  $$('#theme button').forEach((b) => (b.onclick = () => { cur.theme = b.dataset.t; $$('#theme button').forEach((x) => x.setAttribute('aria-pressed', x === b)); queueSave(); drawAll(); }));
+  $('#cap').onclick = () => copy(`${cur.caption || ''}\n\n${(cur.hashtags || []).join(' ')}`);
+  $('#add').onclick = () => { cur.slides.splice(cur.slides.length - 1, 0, { type: 'body', title: '', body: '' }); renderSlides(); queueSave(); };
+  $('#del').onclick = async () => { if (!confirm('이 웹진을 삭제할까요?')) return; await W.del(cur.id); cur = null; $('#editor').innerHTML = ''; load(); };
+  $('#zip').onclick = async () => {
+    const files = []; for (const [i, cv] of $$('#slides canvas').entries()) files.push({ name: `${String(i + 1).padStart(2, '0')}.png`, data: await D.toBytes(cv) });
+    download(`artheus-webzine-${cur.id}.zip`, D.zip(files)); toast('받았습니다. 인스타그램 앱에서 순서대로 올리세요');
+  };
+  renderSlides();
+}
+function renderSlides() {
+  $('#slides').innerHTML = cur.slides.map((s, i) => `<div class="sl" data-i="${i}"><canvas title="눌러서 이 장만 받기"></canvas><div class="f2">
+    <div class="row"><b>${i + 1}</b><select class="in" data-k="type" style="width:auto">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${s.type === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      <input class="in" data-k="kicker" value="${esc(s.kicker || '')}" placeholder="머리말" style="flex:1">
+      <button class="btn sm" data-mv="-1">↑</button><button class="btn sm" data-mv="1">↓</button><button class="btn sm danger" data-rm>✕</button></div>
+    <input class="in" data-k="title" value="${esc(s.title || '')}" placeholder="제목">
+    <textarea class="in" data-k="body" placeholder="본문">${esc(s.body || '')}</textarea>
+    ${s.type === 'list' ? `<textarea class="in" data-k="items" placeholder="목록 (한 줄에 하나, 최대 5개)">${esc((s.items || []).join('\n'))}</textarea>` : ''}
+    <div class="row"><label class="btn sm">🖼 사진${s.image ? ' 바꾸기' : ''}<input type="file" accept="image/*" data-img hidden></label>${s.image ? '<button class="btn sm" data-noimg>사진 빼기</button>' : ''}</div></div></div>`).join('');
+  $$('#slides .sl').forEach((el) => {
+    const i = +el.dataset.i, s = cur.slides[i];
+    el.querySelectorAll('[data-k]').forEach((inp) => (inp.oninput = inp.onchange = () => {
+      const k = inp.dataset.k; s[k] = k === 'items' ? inp.value.split('\n').map((x) => x.trim()).filter(Boolean) : inp.value;
+      if (k === 'type') return renderSlides(), queueSave();
+      draw(el.querySelector('canvas'), s, i, cur.slides.length, cur.theme); queueSave();
+    }));
+    el.querySelectorAll('[data-mv]').forEach((b) => (b.onclick = () => { const j = i + +b.dataset.mv; if (j < 0 || j >= cur.slides.length) return; [cur.slides[i], cur.slides[j]] = [cur.slides[j], cur.slides[i]]; renderSlides(); queueSave(); }));
+    el.querySelector('[data-rm]').onclick = () => { cur.slides.splice(i, 1); renderSlides(); queueSave(); };
+    el.querySelector('[data-img]').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { s.image = (await D.upload(f)).url; renderSlides(); queueSave(); } catch (err) { toast(err.message); } };
+    const ni = el.querySelector('[data-noimg]'); if (ni) ni.onclick = () => { delete s.image; renderSlides(); queueSave(); };
+    el.querySelector('canvas').onclick = (e) => e.target.toBlob((b) => download(`${String(i + 1).padStart(2, '0')}.png`, b));
+  });
+  drawAll();
+}
+async function drawAll() { await D.fonts(); $$('#slides .sl').forEach((el) => { const i = +el.dataset.i; draw(el.querySelector('canvas'), cur.slides[i], i, cur.slides.length, cur.theme); }); }
+function queueSave() { clearTimeout(saveT); saveT = setTimeout(async () => { await W.put(cur.id, cur); const k = items.findIndex((x) => x.id === cur.id); if (k >= 0) items[k] = { ...cur, updatedAt: new Date().toISOString() }; renderList(); }, 600); }
+
+$('#new').onclick = async () => {
+  let cols = []; try { cols = (await api('/__studio/api/columns')).columns; } catch {}
+  const v = await form({ title: '새 웹진', note: '칼럼을 고르면 그 내용을, 아니면 주제를 바탕으로 AI가 캐러셀 문구를 씁니다. "빈 웹진"은 직접 채웁니다.', fields: [
+    { k: 'slug', label: '칼럼에서 만들기', type: 'select', options: ['', ...cols.map((c) => c.slug)], help: cols.map((c) => `${c.slug} = ${c.title}`).join(' / ') },
+    { k: 'topic', label: '또는 주제', ph: '예: 입시 독백 고를 때 많이 하는 실수 3가지' },
+    { k: 'mode', label: '만드는 방법', type: 'select', options: ['AI로 만들기', '빈 웹진'] },
+  ], submit: '만들기' });
+  if (!v) return;
+  const topic = v.topic || cols.find((c) => c.slug === v.slug)?.title || '';
+  let data = { title: topic || '새 웹진', theme: 'ivory', caption: '', hashtags: ['#연기입시', '#연극영화과', '#아터스'], slides: [{ type: 'cover', title: topic || '제목', body: '' }, { type: 'body', title: '', body: '' }, { type: 'cta', title: '더 궁금한 점이 있다면', body: '' }] };
+  if (v.mode === 'AI로 만들기') {
+    if (!topic) return toast('칼럼이나 주제를 넣어 주세요');
+    $('#editor').innerHTML = '<div class="card"><span class="spin"></span> AI가 슬라이드를 쓰는 중이에요… (1–3분) <span id="st" class="small muted"></span></div>';
+    try { data = { ...data, ...(await ai('webzine', { topic, slug: v.slug || undefined }, (s) => { const e = $('#st'); if (e) e.textContent = s; })) }; data.theme = 'ivory'; }
+    catch (e) { $('#editor').innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; return; }
+  }
+  const saved = await W.add({ ...data, sourceSlug: v.slug || '' }); await load(); openW(saved);
+};
+load();
+</script></body></html>

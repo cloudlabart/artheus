@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>광고 영상</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script><script src="/__studio/kit/draw.js"></script>
+<style>
+.wrap { display: grid; grid-template-columns: 240px minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.phone { position: sticky; top: 12px; display: grid; gap: 8px; justify-items: center; }
+.phone canvas { width: 270px; height: 480px; border-radius: 22px; border: 8px solid #111; background: #000; }
+.sc { display: grid; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; }
+.sc textarea.in { min-height: 54px; font-size: 13px; } .sc input.in { font-size: 13px; }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } .phone { position: static; } }
+</style></head>
+<body><div class="page">
+  <div class="head"><h1>광고 영상</h1><span class="sub">세로 9:16 (릴스·쇼츠·스토리)</span><span class="spacer"></span><button class="btn primary" id="new">+ 새 광고</button></div>
+  <div class="wrap">
+    <div class="card"><h2>목록</h2><div id="list" class="list"></div></div>
+    <div id="editor"><div class="empty">새 광고를 만들면 AI가 목적·타깃에 맞춰 장면별 대본을 씁니다. 장면마다 사진·영상을 넣고 바로 세로 영상으로 뽑을 수 있어요.</div></div>
+    <div class="phone" id="phone" hidden><canvas id="cv" width="1080" height="1920"></canvas>
+      <div class="row"><button class="btn" id="play">▶ 미리보기</button><button class="btn primary" id="rec">● 영상 만들기</button></div>
+      <div class="small muted" id="recInfo" style="text-align:center;max-width:280px">녹화하는 동안 이 탭을 띄워 두세요. 음악·내레이션은 인스타·캡컷에서 입히면 됩니다.</div></div>
+  </div>
+</div>
+<script>
+const { $, $$, esc, db, toast, form, ai, copy, download, fmtDate } = K;
+const A = db('ads');
+let items = [], cur = null, saveT, playing = false;
+const media = new Map(); // url -> HTMLImageElement | HTMLVideoElement
+
+async function load() { items = (await A.list()).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))); renderList(); }
+function renderList() {
+  $('#list').innerHTML = items.length ? items.map((w) => `<div class="item click" data-id="${w.id}" style="${cur?.id === w.id ? 'border-color:var(--accent)' : ''}"><div><div class="t">${esc(w.title || '제목 없음')}</div><div class="s">${total(w)}초 · ${fmtDate(w.updatedAt)}</div></div></div>`).join('') : '<div class="muted small">아직 없습니다.</div>';
+  $$('#list .item').forEach((el) => (el.onclick = () => openAd(items.find((w) => w.id === el.dataset.id))));
+}
+const total = (w) => (w.scenes || []).reduce((s, x) => s + (+x.seconds || 3), 0);
+async function getMedia(sc) {
+  if (!sc.media) return null;
+  if (media.has(sc.media)) return media.get(sc.media);
+  if (/\.(mp4|webm|mov)$/i.test(sc.media)) {
+    const v = document.createElement('video'); v.src = sc.media; v.muted = true; v.playsInline = true; v.loop = true; v.preload = 'auto';
+    await new Promise((r) => { v.onloadeddata = r; v.onerror = r; }); media.set(sc.media, v); return v;
+  }
+  const im = await D.loadImage(sc.media); media.set(sc.media, im); return im;
+}
+const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+
+/* 한 프레임 그리기: 장면 k, 장면 안 시간 t(초) */
+function frame(c, k, t, mediaEl) {
+  const W = 1080, H = 1920, P = 90, sc = cur.scenes[k], dur = +sc.seconds || 3, th = D.THEMES[cur.theme || 'navy'];
+  const last = k === cur.scenes.length - 1;
+  c.fillStyle = th.bg; c.fillRect(0, 0, W, H);
+  if (mediaEl) {
+    D.cover(c, mediaEl, 0, 0, W, H, 1 + 0.08 * (t / dur));
+    const g = c.createLinearGradient(0, H * 0.35, 0, H); g.addColorStop(0, 'rgba(10,24,38,0)'); g.addColorStop(1, 'rgba(10,24,38,.88)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  } else {
+    c.save(); c.globalAlpha = 0.16; c.fillStyle = th.accent; c.beginPath(); c.arc(W * 0.85 - 80 * Math.sin(t), H * 0.22 + 40 * t, 380, 0, Math.PI * 2); c.fill(); c.restore();
+  }
+  const fg = mediaEl ? '#FAF8F4' : th.fg, sub = mediaEl ? '#DFE8EF' : th.sub, acc = mediaEl ? '#A9C5D9' : th.accent;
+  // 상단 진행 막대(스토리 스타일)
+  const n = cur.scenes.length, gap = 10, bw = (W - P * 2 - gap * (n - 1)) / n;
+  for (let i = 0; i < n; i++) { c.fillStyle = 'rgba(255,255,255,.28)'; D.rrect(c, P + i * (bw + gap), 70, bw, 8, 4); c.fill(); c.fillStyle = fg; const p = i < k ? 1 : i === k ? Math.min(1, t / dur) : 0; if (p) { D.rrect(c, P + i * (bw + gap), 70, bw * p, 8, 4); c.fill(); } }
+  D.text(c, 'ARTHEUS', P, 112, { size: 34, weight: 700, color: fg, maxW: 600 });
+  const a1 = ease(t / 0.45), a2 = ease((t - 0.25) / 0.45), mw = W - P * 2;
+  if (last) {
+    const y0 = H * 0.36;
+    const y1 = D.text(c, sc.headline || '지금 상담받아 보세요', P, y0 + 60 * (1 - a1), { size: 96, weight: 700, color: fg, maxW: mw, lh: 1.22, alpha: a1, maxLines: 4 });
+    const y2 = sc.sub ? D.text(c, sc.sub, P, y1 + 30, { size: 46, color: sub, maxW: mw, lh: 1.45, alpha: a2, maxLines: 3 }) : y1;
+    c.save(); c.globalAlpha = a2; c.font = `700 52px ${D.FONT}`; const label = '@artheus_act DM 상담'; const bw2 = c.measureText(label).width + 120;
+    c.fillStyle = acc; D.rrect(c, P, y2 + 60, bw2, 120, 60); c.fill(); c.restore();
+    D.text(c, label, P + bw2 / 2, y2 + 92, { size: 52, weight: 700, color: mediaEl ? '#132B3F' : th.on, align: 'center', maxW: bw2, alpha: a2 });
+    return;
+  }
+  const hh = D.measure(c, sc.headline || '', { size: 100, weight: 700, maxW: mw, lh: 1.2 }), sh = sc.sub ? D.measure(c, sc.sub, { size: 48, maxW: mw, lh: 1.45 }) : 0;
+  const y0 = H - 260 - hh - sh;
+  c.save(); c.globalAlpha = a1; c.fillStyle = acc; c.fillRect(P, y0 - 40, 120 * a1, 12); c.restore();
+  const y1 = D.text(c, sc.headline || '', P, y0 + 60 * (1 - a1), { size: 100, weight: 700, color: fg, maxW: mw, lh: 1.2, alpha: a1, maxLines: 4 });
+  if (sc.sub) D.text(c, sc.sub, P, y1 + 24 + 30 * (1 - a2), { size: 48, color: sub, maxW: mw, lh: 1.45, alpha: a2, maxLines: 3 });
+}
+async function run(record) {
+  if (!cur?.scenes?.length || playing) return;
+  await D.fonts(); playing = true;
+  const cv = $('#cv'), c = cv.getContext('2d');
+  const els = await Promise.all(cur.scenes.map(getMedia));
+  let rec, chunks = [], mime = '';
+  if (record) {
+    mime = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+    if (!mime) { playing = false; return toast('이 브라우저는 영상 녹화를 지원하지 않아요. 크롬에서 열어 주세요.'); }
+    rec = new MediaRecorder(cv.captureStream(30), { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data); rec.start(200);
+    $('#recInfo').textContent = '녹화 중… 이 탭을 그대로 두세요.';
+  }
+  const starts = []; let acc = 0; for (const s of cur.scenes) { starts.push(acc); acc += +s.seconds || 3; }
+  const t0 = performance.now(); let lastK = -1;
+  await new Promise((done) => {
+    const tick = () => {
+      const t = (performance.now() - t0) / 1000;
+      if (t >= acc) return done();
+      let k = starts.findIndex((s, i) => t >= s && (i === starts.length - 1 || t < starts[i + 1]));
+      if (k !== lastK) { els.forEach((e, i) => e?.pause?.()); const v = els[k]; if (v?.play) { v.currentTime = 0; v.play().catch(() => {}); } lastK = k; }
+      frame(c, k, t - starts[k], els[k]); requestAnimationFrame(tick);
+    };
+    tick();
+  });
+  els.forEach((e) => e?.pause?.());
+  if (rec) {
+    await new Promise((r) => { rec.onstop = r; rec.stop(); });
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    download(`artheus-ad-${cur.id}.${ext}`, new Blob(chunks, { type: mime.split(';')[0] }));
+    $('#recInfo').textContent = ext === 'mp4' ? 'MP4로 저장했어요.' : 'WebM으로 저장했어요. 인스타에 올리기 전 MP4로 바꿔야 할 수 있어요(캡컷에서 불러오면 자동 변환).';
+  }
+  playing = false;
+}
+function preview(k = 0) { D.fonts().then(async () => { const el = await getMedia(cur.scenes[k]); frame($('#cv').getContext('2d'), k, 1.2, el); }); }
+
+function openAd(w) {
+  cur = JSON.parse(JSON.stringify(w)); cur.theme ||= 'navy'; renderList(); $('#phone').hidden = false;
+  $('#editor').innerHTML = `<div class="grid" style="gap:12px">
+    <div class="card"><div class="row"><input class="in" id="title" value="${esc(cur.title || '')}" style="flex:1" placeholder="광고 이름">
+      <div class="seg" id="theme">${Object.entries(D.THEMES).map(([k, t]) => `<button data-t="${k}" aria-pressed="${cur.theme === k}">${t.name}</button>`).join('')}</div></div>
+      ${cur.hook ? `<div class="small"><b>훅</b> ${esc(cur.hook)}</div>` : ''}
+      <textarea class="in" id="caption" placeholder="게시물 캡션">${esc(cur.caption || '')}</textarea>
+      <input class="in" id="tags" value="${esc((cur.hashtags || []).join(' '))}" placeholder="#해시태그">
+      <div class="row"><button class="btn" id="cap">캡션 복사</button><button class="btn" id="script">촬영·내레이션 대본 복사</button><button class="btn" id="add">+ 장면</button><span class="spacer"></span><button class="btn danger" id="del">삭제</button></div></div>
+    <div id="scenes" class="grid" style="gap:8px"></div></div>`;
+  $('#title').oninput = (e) => { cur.title = e.target.value; queueSave(); };
+  $('#caption').oninput = (e) => { cur.caption = e.target.value; queueSave(); };
+  $('#tags').oninput = (e) => { cur.hashtags = e.target.value.split(/\s+/).filter(Boolean); queueSave(); };
+  $$('#theme button').forEach((b) => (b.onclick = () => { cur.theme = b.dataset.t; $$('#theme button').forEach((x) => x.setAttribute('aria-pressed', x === b)); queueSave(); preview(); }));
+  $('#cap').onclick = () => copy(`${cur.caption || ''}\n\n${(cur.hashtags || []).join(' ')}`);
+  $('#script').onclick = () => copy(cur.scenes.map((s, i) => `#${i + 1} (${s.seconds}초)\n화면: ${s.visual || '-'}\n자막: ${s.headline || ''} / ${s.sub || ''}\n내레이션: ${s.voiceover || '-'}`).join('\n\n'));
+  $('#add').onclick = () => { cur.scenes.splice(cur.scenes.length - 1, 0, { seconds: 3, headline: '', sub: '' }); renderScenes(); queueSave(); };
+  $('#del').onclick = async () => { if (!confirm('이 광고를 삭제할까요?')) return; await A.del(cur.id); cur = null; $('#editor').innerHTML = ''; $('#phone').hidden = true; load(); };
+  renderScenes(); preview();
+}
+function renderScenes() {
+  $('#scenes').innerHTML = cur.scenes.map((s, i) => `<div class="sc" data-i="${i}"><div class="row"><b>#${i + 1}${i === cur.scenes.length - 1 ? ' 마무리' : ''}</b>
+      <input class="in" type="number" min="1" max="15" data-k="seconds" value="${+s.seconds || 3}" style="width:70px"><span class="small muted">초</span><span class="spacer"></span>
+      <button class="btn sm" data-pv>보기</button><button class="btn sm" data-mv="-1">↑</button><button class="btn sm" data-mv="1">↓</button><button class="btn sm danger" data-rm>✕</button></div>
+    <input class="in" data-k="headline" value="${esc(s.headline || '')}" placeholder="큰 자막 (14자 안팎)">
+    <input class="in" data-k="sub" value="${esc(s.sub || '')}" placeholder="작은 자막">
+    <textarea class="in" data-k="visual" placeholder="촬영·이미지 제안">${esc(s.visual || '')}</textarea>
+    <textarea class="in" data-k="voiceover" placeholder="내레이션">${esc(s.voiceover || '')}</textarea>
+    <div class="row"><label class="btn sm">🎞 사진·영상${s.media ? ' 바꾸기' : ' 넣기'}<input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" data-media hidden></label>${s.media ? `<span class="small muted">${/\.(mp4|webm|mov)$/i.test(s.media) ? '영상' : '사진'} 있음</span><button class="btn sm" data-nomedia>빼기</button>` : ''}</div></div>`).join('');
+  $$('#scenes .sc').forEach((el) => {
+    const i = +el.dataset.i, s = cur.scenes[i];
+    el.querySelectorAll('[data-k]').forEach((inp) => (inp.oninput = () => { s[inp.dataset.k] = inp.dataset.k === 'seconds' ? Math.max(1, Math.min(15, +inp.value || 3)) : inp.value; queueSave(); preview(i); }));
+    el.querySelector('[data-pv]').onclick = () => preview(i);
+    el.querySelectorAll('[data-mv]').forEach((b) => (b.onclick = () => { const j = i + +b.dataset.mv; if (j < 0 || j >= cur.scenes.length) return; [cur.scenes[i], cur.scenes[j]] = [cur.scenes[j], cur.scenes[i]]; renderScenes(); queueSave(); }));
+    el.querySelector('[data-rm]').onclick = () => { if (cur.scenes.length < 2) return; cur.scenes.splice(i, 1); renderScenes(); queueSave(); };
+    el.querySelector('[data-media]').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; toast('올리는 중…'); try { s.media = (await D.upload(f)).url; renderScenes(); queueSave(); preview(i); } catch (err) { toast(err.message); } };
+    const nm = el.querySelector('[data-nomedia]'); if (nm) nm.onclick = () => { delete s.media; renderScenes(); queueSave(); preview(i); };
+  });
+}
+function queueSave() { clearTimeout(saveT); saveT = setTimeout(async () => { await A.put(cur.id, cur); const k = items.findIndex((x) => x.id === cur.id); if (k >= 0) items[k] = { ...cur, updatedAt: new Date().toISOString() }; renderList(); }, 600); }
+
+$('#play').onclick = () => run(false);
+$('#rec').onclick = () => run(true);
+$('#new').onclick = async () => {
+  const v = await form({ title: '새 광고 영상', submit: 'AI로 대본 만들기', fields: [
+    { k: 'goal', label: '목적', type: 'select', options: ['상담 문의 늘리기', '입시반 모집', '원데이 클래스 모집', '학원 인지도', '합격 후기 알리기'] },
+    { k: 'target', label: '타깃', default: '연극영화과 입시를 준비하는 고2–고3' },
+    { k: 'seconds', label: '길이(초)', type: 'select', options: ['15', '20', '30'], default: '20' },
+    { k: 'channel', label: '채널', type: 'select', options: ['인스타그램 릴스', '유튜브 쇼츠', '인스타 스토리 광고'] },
+    { k: 'message', label: '꼭 전할 메시지', type: 'textarea', ph: '예: 1:1 장면 분석, 소수 정예, 홍대 위치, 겨울 특강 모집' },
+  ] });
+  if (!v) return;
+  $('#editor').innerHTML = '<div class="card"><span class="spin"></span> AI가 장면별 대본을 쓰는 중이에요… <span id="st" class="small muted"></span></div>';
+  try {
+    const r = await ai('ad', v, (s) => { const e = $('#st'); if (e) e.textContent = s; });
+    const saved = await A.add({ ...r, brief: v, theme: 'navy', scenes: (r.scenes || []).map((s) => ({ ...s, seconds: Math.max(1, Math.min(15, +s.seconds || 3)) })) });
+    await load(); openAd(saved);
+  } catch (e) { $('#editor').innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; }
+};
+load();
+</script></body></html>

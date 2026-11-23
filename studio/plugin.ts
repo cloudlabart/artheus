@@ -17,6 +17,7 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import { spawn, spawnSync } from 'node:child_process';
 import { JobManager, type JobKind } from './jobs';
+import { createAdmin } from './admin';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -213,6 +214,7 @@ export function artheusStudio(): Plugin {
       try { maxJobs = JSON.parse(fs.readFileSync(path.join(root, 'content', 'geo-seo.config.json'), 'utf8')).studio?.max_jobs || 3; } catch {}
       const jm = new JobManager(root, s.config.logger, maxJobs);
       s.httpServer?.once('close', () => jm.stopAll());
+      const admin = createAdmin(root, here, jm);
       const busyMsg = (lane: string) => { const j = jm.conflict(lane); return j ? `“${j.title}” 작업이 같은 부분을 고치는 중입니다. 끝난 뒤에 하거나 그 작업을 중지하세요.` : ''; };
 
       s.middlewares.use(async (req, res, next) => {
@@ -226,10 +228,7 @@ export function artheusStudio(): Plugin {
         if (!url.startsWith('/__studio')) return next();
         if (!isLocal(req)) return json(res, 403, { error: '스튜디오는 이 컴퓨터에서만 열 수 있습니다.' });
 
-        if (url === '/__studio' || url === '/__studio/') {
-          res.setHeader('Content-Type', 'text/html; charset=utf-8');
-          return res.end(fs.readFileSync(path.join(here, 'ui.html'), 'utf8'));
-        }
+        if (await admin(req, res, url)) return; // 셸·운영 앱·데이터·연동 (studio/admin.ts)
 
         if (url === '/__studio/api/status') {
           const version = await claudeAvailable();
@@ -443,7 +442,7 @@ export function artheusStudio(): Plugin {
       s.httpServer?.once('listening', () => {
         setTimeout(() => {
           const port = (s.httpServer?.address() as any)?.port ?? 5173;
-          s.config.logger.info(`\n  🎬 아터스 스튜디오:  http://localhost:${port}/__studio\n`);
+          s.config.logger.info(`\n  🎬 아터스 스튜디오:  http://localhost:${port}/__studio   (작업실만: /__studio/work)\n`);
           if (process.env.CLAUDECODE) s.config.logger.warn('  ⚠  Claude Code 안에서 실행 중이라 스튜디오의 채팅이 동작하지 않습니다.\n     새 터미널 창에서 npm run dev 를 실행하세요.\n');
         }, 50);
       });

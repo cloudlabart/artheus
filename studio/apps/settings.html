@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>설정</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1>설정</h1><span class="sub">연동 키와 데이터는 이 컴퓨터(.studio 폴더)에만 저장되고 GitHub에 올라가지 않습니다.</span></div>
+  <div class="grid g2" id="forms"></div>
+  <div class="grid g2">
+    <div class="card"><h2>백업</h2>
+      <div class="small">CRM·상담·예약·수강료·메시지 기록은 <code>.studio/data/</code>에 있고, 하루 한 번 <code>.studio/backup/날짜/</code>에 자동 복사됩니다(60일 보관). 컴퓨터 고장에 대비해 가끔 파일로 내려받아 안전한 곳에 두세요.</div>
+      <div class="row"><a class="btn" href="/__studio/api/backup" download>백업 파일 받기</a><label class="btn danger">백업에서 복원<input type="file" id="restore" accept=".json" hidden></label></div></div>
+    <div class="card"><h2>개인정보 체크</h2>
+      <div class="small" style="line-height:1.8">
+        · 수강생 다수가 미성년자입니다. <b>만 14세 미만</b>은 개인정보 수집에 보호자(법정대리인) 동의가 필요해요. CRM의 동의 칸을 채워 두세요.<br>
+        · 이벤트·모집 같은 <b>광고성 메시지</b>는 수신 동의한 사람에게만, 제목 앞에 (광고) 표시와 수신 거부 방법을 함께 보내야 합니다. 수강료·상담 안내 같은 정보성 알림톡은 해당 없음.<br>
+        · 이 Mac은 로그인 암호와 <b>FileVault(디스크 암호화)</b>를 켜 두세요. 백업 파일도 암호가 걸린 곳에 보관하세요.<br>
+        · 그만둔 원생의 정보는 보관 기간이 지나면 삭제하세요(CRM › 연락처 › 삭제).
+      </div></div>
+  </div>
+</div>
+<script>
+const { $, esc, api, toast } = K;
+const SECTIONS = [
+  { id: 'academy', title: '학원 정보', help: '메시지 #{학원}, 수강료 납부 기한에 쓰입니다.', fields: [
+    { k: 'name', label: '학원 이름', ph: '아터스 연기학원' }, { k: 'dueDay', label: '수강료 납부 기한(매월 며칠)', ph: '10' }, { k: 'bank', label: '입금 계좌 안내', ph: '○○은행 000-0000 (예금주)' }] },
+  { id: 'solapi', status: 'kakao', title: '카카오 알림톡 (솔라피)', help: '1) 카카오톡 채널 개설·비즈니스 인증 → 2) solapi.com 가입, 카카오 채널 연동(pfId 발급) → 3) 알림톡 템플릿 등록·검수 → 4) 개발 › API Key 발급, 발신번호 등록.', link: 'https://console.solapi.com', fields: [
+    { k: 'apiKey', label: 'API Key' }, { k: 'apiSecret', label: 'API Secret', type: 'password' }, { k: 'pfId', label: '카카오 채널 pfId' }, { k: 'from', label: '발신번호', ph: '02-000-0000' }, { k: 'smsFallback', label: '알림톡 실패 시 문자로 대신 보내기', type: 'checkbox' }] },
+  { id: 'youtube', status: 'youtube', title: '유튜브', help: 'Google Cloud 콘솔 › YouTube Data API v3 사용 설정 › API 키.', link: 'https://console.cloud.google.com/apis/library/youtube.googleapis.com', fields: [
+    { k: 'apiKey', label: 'API 키', type: 'password' }, { k: 'channel', label: '채널 (@핸들 또는 UC… 채널 ID)', ph: '@artheus' }] },
+  { id: 'instagram', status: 'instagram', title: '인스타그램 (Graph API)', help: '프로페셔널 계정 + 페이스북 페이지 연결 → Meta 개발자 앱에서 장기 토큰(60일) 발급 → instagram_business_account ID.', link: 'https://developers.facebook.com/tools/explorer/', fields: [
+    { k: 'accessToken', label: '액세스 토큰', type: 'password' }, { k: 'userId', label: '인스타그램 비즈니스 계정 ID' }] },
+  { id: 'naver', status: 'naver', title: '네이버 스마트플레이스', help: '네이버 예약은 공개 API가 없어 예약 파트너센터 엑셀을 가져옵니다. 바로가기 주소만 넣어 두세요.', link: 'https://partner.booking.naver.com', fields: [
+    { k: 'placeUrl', label: '스마트플레이스 주소', ph: 'https://new.smartplace.naver.com/bizes/place/…' }, { k: 'bookingUrl', label: '예약 파트너센터 주소', ph: 'https://partner.booking.naver.com/bizes/…' }] },
+];
+async function load() {
+  const { config, status } = await api('/__studio/api/integrations');
+  $('#forms').innerHTML = SECTIONS.map((s) => `<form class="card" data-sec="${s.id}"><h2>${esc(s.title)} ${s.status ? (status[s.status] ? '<span class="badge ok">연결됨</span>' : '<span class="badge">미연결</span>') : ''}</h2>
+    <div class="help">${esc(s.help)} ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">열기 ↗</a>` : ''}</div>
+    ${s.fields.map((f) => f.type === 'checkbox'
+      ? `<label class="f check"><input type="checkbox" name="${f.k}" ${config[s.id]?.[f.k] ? 'checked' : ''}>${esc(f.label)}</label>`
+      : `<label class="f">${esc(f.label)}<input class="in" name="${f.k}" type="${f.type || 'text'}" value="${esc(config[s.id]?.[f.k] || '')}" placeholder="${esc(f.ph || '')}" autocomplete="off"></label>`).join('')}
+    <div class="row"><span class="spacer"></span><button class="btn primary">저장</button></div></form>`).join('');
+  document.querySelectorAll('form[data-sec]').forEach((f) => (f.onsubmit = async (e) => {
+    e.preventDefault(); const sec = f.dataset.sec; const vals = {};
+    for (const el of f.elements) if (el.name) vals[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+    await api('/__studio/api/integrations', { method: 'POST', body: { [sec]: vals } }); toast('저장했습니다'); load();
+  }));
+}
+$('#restore').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (!confirm('지금 데이터를 백업 파일 내용으로 바꿉니다. 계속할까요? (현재 데이터는 오늘 자동 백업에 남아 있어요)')) return;
+  try { const r = await api('/__studio/api/backup', { method: 'POST', body: JSON.parse(await f.text()) }); toast(`복원했습니다 (${r.restored}종류)`); } catch (err) { toast(err.message); }
+};
+load();
+</script></body></html>

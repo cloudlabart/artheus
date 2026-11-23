@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>유튜브</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1>유튜브</h1><span class="sub" id="ch"></span><span class="spacer"></span>
+    <a class="btn" href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube 스튜디오 ↗</a><button class="btn" id="reload">새로고침</button></div>
+  <div id="out"><div class="muted"><span class="spin"></span> 불러오는 중…</div></div>
+</div>
+<script>
+const { $, esc, api, toast, fmtDate, ai, copy } = K;
+const n = (x) => (+x || 0).toLocaleString('ko-KR');
+async function load() {
+  try {
+    const d = await api('/__studio/api/youtube');
+    $('#ch').textContent = d.channel.title;
+    $('#out').innerHTML = `<div class="grid g3">${[['구독자', n(d.channel.subscribers)], ['총 조회수', n(d.channel.views)], ['영상', n(d.channel.videos) + '개']].map(([a, b]) => `<div class="card stat"><span>${a}</span><b>${b}</b></div>`).join('')}</div>
+      <div class="card"><h2>최근 영상</h2><div id="vids"></div></div>`;
+    K.table($('#vids'), d.videos, [
+      { label: '', render: (v) => `<img src="${esc(v.thumb)}" alt="" style="width:96px;border-radius:8px">` },
+      { label: '제목', render: (v) => `<a href="https://youtu.be/${esc(v.id)}" target="_blank" rel="noopener">${esc(v.title)}</a>` },
+      { label: '게시', render: (v) => fmtDate(v.date) }, { label: '조회', num: true, render: (v) => n(v.views) },
+      { label: '좋아요', num: true, render: (v) => n(v.likes) }, { label: '댓글', num: true, render: (v) => n(v.comments) },
+      { label: '', render: (v) => `<button class="btn sm" data-meta="${esc(v.id)}">제목·설명 다듬기</button>` },
+    ]);
+    document.querySelectorAll('[data-meta]').forEach((b) => (b.onclick = () => meta(d.videos.find((v) => v.id === b.dataset.meta))));
+  } catch (e) {
+    $('#out').innerHTML = `<div class="notice warn">${esc(e.message)}</div>
+      <div class="notice"><b>연결 방법</b><br>1. Google Cloud 콘솔에서 프로젝트를 만들고 <b>YouTube Data API v3</b>를 사용 설정합니다.<br>2. 사용자 인증 정보 › API 키 만들기 → 키를 복사합니다(“YouTube Data API”로 제한 권장).<br>3. <a href="#" id="go">설정 › 유튜브</a>에 API 키와 채널(@핸들 또는 UC로 시작하는 채널 ID)을 넣습니다.<br>공개 통계(구독자·조회수·영상별 성과)를 봅니다. 시청 지속 시간 같은 상세 분석은 YouTube 스튜디오에서 확인하세요.</div>`;
+    $('#go').onclick = (ev) => { ev.preventDefault(); K.open('settings'); };
+  }
+}
+async function meta(v) {
+  const m = K.drawer(`<h3>제목·설명 다듬기</h3><div class="small muted">${esc(v.title)}</div><textarea class="in" id="notes" placeholder="영상 내용 메모 (예: 입시 독백 피드백 3명, 한예종 준비생)"></textarea><button class="btn primary" id="go">AI로 제안 받기</button><div id="res"></div>`);
+  m.el.querySelector('#go').onclick = async (e) => {
+    e.target.disabled = true; const res = m.el.querySelector('#res'); res.innerHTML = '<span class="spin"></span> 작성 중…';
+    try {
+      const r = await ai('ytmeta', { title: v.title, notes: m.el.querySelector('#notes').value });
+      res.innerHTML = `<div class="card"><h2>제목 후보</h2>${(r.titles || []).map((t) => `<div class="row"><span style="flex:1">${esc(t)}</span><button class="btn sm" data-c="${esc(t)}">복사</button></div>`).join('')}</div>
+        <div class="card"><h2>설명</h2><div class="small" style="white-space:pre-wrap">${esc(r.description || '')}</div><button class="btn sm" data-c="${esc(r.description || '')}">복사</button></div>
+        <div class="card"><h2>태그</h2><div class="small">${esc((r.tags || []).join(', '))}</div><button class="btn sm" data-c="${esc((r.tags || []).join(', '))}">복사</button></div>`;
+      res.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => copy(b.dataset.c)));
+    } catch (err) { res.textContent = err.message; }
+    e.target.disabled = false;
+  };
+}
+$('#reload').onclick = load; load();
+</script></body></html>

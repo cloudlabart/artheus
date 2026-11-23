@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1>CRM</h1><span class="sub" id="count"></span><span class="spacer"></span>
+    <input class="in search" id="q" placeholder="이름·연락처·학교 검색">
+    <div class="seg" id="view"><button data-v="list" aria-pressed="true">목록</button><button data-v="board" aria-pressed="false">단계 보드</button></div>
+    <label class="btn" title="CSV 가져오기 (이름, 연락처, 보호자, 보호자 연락처, 학교, 학년, 과정, 단계, 유입, 메모)">가져오기<input type="file" id="csv" accept=".csv,text/csv" hidden></label>
+    <button class="btn" id="export">내보내기</button>
+    <button class="btn primary" id="add">+ 연락처</button></div>
+  <div class="row" id="stages"></div>
+  <div id="out"></div>
+</div>
+<script>
+const { $, $$, esc, db, form, table, drawer, toast, stageBadge, STAGES, SOURCES, PROGRAMS, phone, fmtDT, fmtDate, won, open, download } = K;
+const C = db('contacts'), CS = db('consults'), INV = db('invoices'), MSG = db('messages');
+const FIELDS = [
+  { k: 'name', label: '이름', required: true },
+  { k: 'stage', label: '단계', type: 'select', options: STAGES, default: '문의' },
+  { k: 'phone', label: '학생 연락처', type: 'tel', ph: '010-0000-0000' },
+  { k: 'grade', label: '학년', type: 'select', options: ['', '중3', '고1', '고2', '고3', 'N수', '대학생', '성인'] },
+  { k: 'guardianName', label: '보호자 이름' },
+  { k: 'guardianPhone', label: '보호자 연락처', type: 'tel' },
+  { k: 'school', label: '학교' },
+  { k: 'birthYear', label: '출생연도', type: 'number', ph: '2008', help: '만 14세 미만이면 보호자 동의가 필요해요' },
+  { k: 'program', label: '관심·수강 과정', type: 'select', options: ['', ...PROGRAMS] },
+  { k: 'fee', label: '월 수강료(원)', type: 'number', help: '수강중이면 수강료 앱에서 매달 청구에 씁니다' },
+  { k: 'source', label: '유입 경로', type: 'select', options: ['', ...SOURCES] },
+  { k: 'targets', label: '목표 대학·전형', ph: '한예종, 중앙대 연영과…' },
+  { k: 'tags', label: '태그', type: 'tags', full: true },
+  { k: 'consentPrivacy', label: '개인정보 수집·이용 동의 받음', type: 'checkbox', full: true },
+  { k: 'consentGuardian', label: '만 14세 미만: 법정대리인(보호자) 동의 받음', type: 'checkbox', full: true },
+  { k: 'consentMarketing', label: '광고성 정보(이벤트·모집 안내) 수신 동의', type: 'checkbox', full: true },
+  { k: 'memo', label: '메모', type: 'textarea' },
+];
+let contacts = [], view = 'list', stageFilter = '전체';
+
+async function load() {
+  contacts = (await C.list()).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+  render();
+}
+function filtered() {
+  const q = $('#q').value.trim().toLowerCase();
+  return contacts.filter((c) => (stageFilter === '전체' || c.stage === stageFilter) &&
+    (!q || [c.name, c.phone, c.guardianPhone, c.school, c.guardianName, (c.tags || []).join(' ')].join(' ').toLowerCase().replace(/-/g, '').includes(q.replace(/-/g, ''))));
+}
+function render() {
+  const counts = Object.fromEntries(STAGES.map((s) => [s, contacts.filter((c) => c.stage === s).length]));
+  $('#count').textContent = `${contacts.length}명`;
+  $('#stages').innerHTML = ['전체', ...STAGES].map((s) => `<button class="btn sm ${s === stageFilter ? 'primary' : ''}" data-s="${s}">${s} ${s === '전체' ? contacts.length : counts[s]}</button>`).join('');
+  $$('#stages button').forEach((b) => (b.onclick = () => { stageFilter = b.dataset.s; render(); }));
+  const rows = filtered();
+  if (view === 'list') {
+    table($('#out'), rows, [
+      { label: '이름', render: (c) => `<b>${esc(c.name)}</b>${c.birthYear && new Date().getFullYear() - c.birthYear < 14 && !c.consentGuardian ? ' <span class="badge danger">보호자 동의 필요</span>' : ''}` },
+      { label: '단계', render: (c) => stageBadge(c.stage) },
+      { label: '과정', k: 'program' },
+      { label: '학교·학년', render: (c) => esc([c.school, c.grade].filter(Boolean).join(' · ')) },
+      { label: '연락처', render: (c) => esc(phone(c.phone || c.guardianPhone)) },
+      { label: '유입', k: 'source' },
+      { label: '수정', render: (c) => `<span class="muted small">${fmtDate(c.updatedAt)}</span>` },
+    ], openDetail);
+  } else {
+    $('#out').innerHTML = `<div class="board">${STAGES.map((s) => `<div class="col"><h3>${s}<span class="muted">${rows.filter((c) => c.stage === s).length}</span></h3>${rows.filter((c) => c.stage === s).map((c) =>
+      `<div class="item click" data-id="${c.id}" style="display:grid;gap:4px"><span class="t">${esc(c.name)}</span><span class="s">${esc([c.program, c.grade].filter(Boolean).join(' · ') || '-')}</span><select class="in" data-move="${c.id}" style="padding:4px 6px;font-size:12px">${STAGES.map((x) => `<option${x === s ? ' selected' : ''}>${x}</option>`).join('')}</select></div>`).join('')}</div>`).join('')}</div>`;
+    $$('.item[data-id]').forEach((el) => (el.onclick = (e) => { if (!e.target.closest('select')) openDetail(contacts.find((c) => c.id === el.dataset.id)); }));
+    $$('select[data-move]').forEach((el) => (el.onchange = async () => { await C.put(el.dataset.move, { stage: el.value }); toast(`단계: ${el.value}`); load(); }));
+  }
+}
+async function edit(c) {
+  const v = await form({ title: c ? `${c.name} 수정` : '새 연락처', fields: FIELDS, values: c || {}, danger: c ? '삭제' : null,
+    note: c ? null : '학생 연락처 또는 보호자 연락처 중 하나는 꼭 넣어 주세요. 개인정보는 이 컴퓨터에만 저장됩니다.' });
+  if (!v) return;
+  if (v.__delete) { await C.del(c.id); toast('삭제했습니다'); return load(); }
+  if (!v.phone && !v.guardianPhone) return toast('연락처를 하나 이상 넣어 주세요');
+  v.phone = phone(v.phone); v.guardianPhone = phone(v.guardianPhone);
+  const dup = !c && contacts.find((x) => (v.phone && x.phone === v.phone) || (v.guardianPhone && x.guardianPhone === v.guardianPhone));
+  if (dup && !confirm(`${dup.name}님과 연락처가 같습니다. 그래도 새로 만들까요?`)) return;
+  const saved = c ? await C.put(c.id, v) : await C.add(v);
+  toast('저장했습니다'); await load(); openDetail(saved);
+}
+async function openDetail(c) {
+  if (!c) return;
+  const [cs, inv, msg] = await Promise.all([CS.list(), INV.list(), MSG.list()]);
+  const mine = (arr) => arr.filter((x) => x.contactId === c.id);
+  const consults = mine(cs).sort((a, b) => String(b.datetime).localeCompare(String(a.datetime)));
+  const invoices = mine(inv).sort((a, b) => String(b.month).localeCompare(String(a.month)));
+  const messages = mine(msg).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const unpaid = invoices.filter((i) => i.status !== '완납').reduce((s, i) => s + (i.amount - (i.payments || []).reduce((t, p) => t + (+p.amount || 0), 0)), 0);
+  const d = drawer(`<div class="row"><h3>${esc(c.name)}</h3>${stageBadge(c.stage)}<span class="spacer"></span><button class="btn sm" data-a="edit">수정</button></div>
+    <div class="card">
+      <div class="small"><b>학생</b> ${esc(phone(c.phone) || '-')} · <b>보호자</b> ${esc([c.guardianName, phone(c.guardianPhone)].filter(Boolean).join(' ') || '-')}</div>
+      <div class="small"><b>학교·학년</b> ${esc([c.school, c.grade].filter(Boolean).join(' · ') || '-')} · <b>과정</b> ${esc(c.program || '-')}${c.fee ? ` (${won(c.fee)}/월)` : ''}</div>
+      <div class="small"><b>목표</b> ${esc(c.targets || '-')} · <b>유입</b> ${esc(c.source || '-')}</div>
+      <div class="row">${c.consentPrivacy ? '<span class="badge ok">개인정보 동의</span>' : '<span class="badge warn">개인정보 동의 미확인</span>'}${c.consentMarketing ? '<span class="badge ok">광고 수신 동의</span>' : '<span class="badge">광고 수신 미동의</span>'}${(c.tags || []).map((t) => `<span class="badge blue">${esc(t)}</span>`).join('')}</div>
+      ${c.memo ? `<div class="small" style="white-space:pre-wrap">${esc(c.memo)}</div>` : ''}
+    </div>
+    <div class="row"><label class="small muted">단계</label><select class="in" id="stg" style="width:auto">${STAGES.map((s) => `<option${s === c.stage ? ' selected' : ''}>${s}</option>`).join('')}</select>
+      <span class="spacer"></span><button class="btn sm" data-a="consult">+ 상담</button><button class="btn sm" data-a="kakao">💬 메시지</button><button class="btn sm" data-a="bill">💳 수강료</button></div>
+    <div class="card"><h2>상담 <small>${consults.length}</small></h2>${consults.length ? `<div class="timeline">${consults.map((x) => `<div><b>${esc(x.type || '상담')}</b> · ${esc(x.status || '')}${x.result ? ' · ' + esc(x.result) : ''}<small>${fmtDT(x.datetime)}</small>${x.notes ? `<span class="small">${esc(x.notes.slice(0, 160))}</span>` : ''}</div>`).join('')}</div>` : '<div class="muted small">아직 없습니다.</div>'}</div>
+    <div class="card"><h2>수강료 <small>${unpaid ? `미납 ${won(unpaid)}` : '미납 없음'}</small></h2>${invoices.slice(0, 6).map((i) => `<div class="row small"><span>${esc(i.month)} ${esc(i.item || '')}</span><span class="spacer"></span><span>${won(i.amount)}</span><span class="badge ${i.status === '완납' ? 'ok' : 'warn'}">${esc(i.status)}</span></div>`).join('') || '<div class="muted small">청구 기록이 없습니다.</div>'}</div>
+    <div class="card"><h2>보낸 메시지 <small>${messages.length}</small></h2>${messages.slice(0, 5).map((m) => `<div class="small"><span class="muted">${fmtDT(m.at)}</span> ${esc(m.text.slice(0, 80))}</div>`).join('') || '<div class="muted small">없습니다.</div>'}</div>`);
+  d.el.querySelector('[data-a=edit]').onclick = () => { d.close(); edit(c); };
+  d.el.querySelector('#stg').onchange = async (e) => { await C.put(c.id, { stage: e.target.value }); toast(`단계: ${e.target.value}`); load(); };
+  d.el.querySelector('[data-a=consult]').onclick = () => open('consult', { contactId: c.id, new: 1 });
+  d.el.querySelector('[data-a=kakao]').onclick = () => open('kakao', { contactId: c.id });
+  d.el.querySelector('[data-a=bill]').onclick = () => open('billing', { contactId: c.id });
+}
+
+/* CSV */
+function parseCSV(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true; else if (ch === ',') { row.push(cell); cell = ''; } else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((x) => x.trim()));
+}
+const MAP = { 이름: 'name', 성명: 'name', 연락처: 'phone', 전화번호: 'phone', 휴대폰: 'phone', 보호자: 'guardianName', '보호자 연락처': 'guardianPhone', 학교: 'school', 학년: 'grade', 과정: 'program', 단계: 'stage', 유입: 'source', 메모: 'memo', 수강료: 'fee' };
+$('#csv').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const rows = parseCSV(await f.text()); if (rows.length < 2) return toast('내용이 없습니다');
+  const head = rows[0].map((h) => MAP[h.trim()] || null);
+  if (!head.includes('name')) return toast('첫 줄에 "이름" 열이 있어야 합니다');
+  const items = rows.slice(1).map((r) => { const o = { stage: '문의' }; head.forEach((k, i) => { if (k && r[i]) o[k] = k === 'fee' ? Number(r[i].replace(/\D/g, '')) : r[i].trim(); }); o.phone = phone(o.phone); o.guardianPhone = phone(o.guardianPhone); return o; }).filter((o) => o.name);
+  const res = await C.bulk(items, 'phone'); toast(`추가 ${res.added} · 갱신 ${res.updated}`); load();
+};
+$('#export').onclick = () => {
+  const cols = ['name', 'stage', 'phone', 'guardianName', 'guardianPhone', 'school', 'grade', 'program', 'fee', 'source', 'targets', 'memo'];
+  const head = ['이름', '단계', '연락처', '보호자', '보호자 연락처', '학교', '학년', '과정', '수강료', '유입', '목표', '메모'];
+  const csv = [head, ...filtered().map((c) => cols.map((k) => c[k] ?? ''))].map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+  download(`artheus-contacts-${K.ymd()}.csv`, new Blob(['﻿' + csv], { type: 'text/csv' }));
+};
+$('#add').onclick = () => edit(null);
+$('#q').oninput = render;
+$$('#view button').forEach((b) => (b.onclick = () => { view = b.dataset.v; $$('#view button').forEach((x) => x.setAttribute('aria-pressed', x === b)); render(); }));
+window.onParams = (p) => { if (p.id) { const c = contacts.find((x) => x.id === p.id); if (c) openDetail(c); } if (p.new) edit(null); };
+load().then(() => window.onParams(Object.fromEntries(new URLSearchParams(location.search))));
+</script></body></html>

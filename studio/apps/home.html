@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>홈</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1 id="hello">오늘</h1><span class="sub" id="date"></span><span class="spacer"></span>
+    <button class="btn" data-go="crm" data-p='{"new":1}'>+ 연락처</button><button class="btn" data-go="consult" data-p='{"new":1}'>+ 상담</button>
+    <button class="btn" data-go="webzine">🗞 웹진</button><button class="btn" data-go="ads">🎬 광고</button><button class="btn" data-work="column">✍️ 칼럼</button></div>
+  <div class="grid g4" id="stats"></div>
+  <div class="grid g3">
+    <div class="card"><h2>오늘 상담</h2><div id="today"></div></div>
+    <div class="card"><h2>네이버 예약 <small>오늘·내일</small></h2><div id="book"></div></div>
+    <div class="card"><h2>후속 연락 · 새 문의</h2><div id="follow"></div></div>
+    <div class="card"><h2>단계별 인원</h2><div id="stages"></div></div>
+    <div class="card"><h2>미납 <small>기한 지남</small></h2><div id="unpaid"></div></div>
+    <div class="card"><h2>AI 작업 · SEO</h2><div id="ai"></div></div>
+  </div>
+</div>
+<script>
+const { $, $$, esc, db, ymd, fmtTime, fmtDate, addDays, won, open, openWork, api, STAGES } = K;
+const n = (x) => (+x || 0).toLocaleString('ko-KR');
+const paid = (i) => (i.payments || []).reduce((s, p) => s + (+p.amount || 0), 0);
+async function load() {
+  const [contacts, consults, bookings, invoices] = await Promise.all(['contacts', 'consults', 'bookings', 'invoices'].map((c) => db(c).list()));
+  const now = new Date(), t0 = ymd(now), t1 = ymd(addDays(now, 1)), week = ymd(addDays(now, -7));
+  $('#date').textContent = fmtDate(now);
+  const todayCs = consults.filter((c) => ymd(c.datetime) === t0).sort((a, b) => String(a.datetime).localeCompare(String(b.datetime)));
+  const books = bookings.filter((b) => [t0, t1].includes(ymd(b.datetime)) && !/취소/.test(b.status || '')).sort((a, b) => String(a.datetime).localeCompare(String(b.datetime)));
+  const newLeads = contacts.filter((c) => ['문의', '상담예약'].includes(c.stage) && String(c.createdAt) >= week);
+  const follow = consults.filter((c) => c.followUpDate && c.followUpDate <= t0 && !c.followedUp);
+  const od = invoices.filter((i) => paid(i) < i.amount && i.dueDate && i.dueDate < t0);
+  const monthInv = invoices.filter((i) => i.month === K.month());
+  const active = contacts.filter((c) => c.stage === '수강중').length;
+  $('#stats').innerHTML = [
+    ['오늘 상담', todayCs.length + '건', 'consult'], ['이번 주 새 문의', newLeads.length + '명', 'crm'],
+    ['수강생', active + '명', 'crm'], ['이번 달 수납', won(monthInv.reduce((s, i) => s + paid(i), 0)), 'billing'],
+  ].map(([a, b, app]) => `<button class="card stat" data-go="${app}" style="text-align:left;cursor:pointer"><span>${a}</span><b>${b}</b></button>`).join('');
+  const nm = (c) => esc(c.name || contacts.find((x) => x.id === c.contactId)?.name || '?');
+  $('#today').innerHTML = todayCs.length ? `<div class="list">${todayCs.map((c) => `<div class="item click" data-go="consult" data-p='{"id":"${c.id}"}'><span class="when">${fmtTime(c.datetime)}</span><div><div class="t">${nm(c)}</div><div class="s">${esc(c.type || '')} · ${esc(c.program || '')}</div></div><span class="spacer"></span><span class="badge ${c.status === '완료' ? 'ok' : 'blue'}">${esc(c.status)}</span></div>`).join('')}</div>` : '<div class="muted small">오늘 상담이 없습니다.</div>';
+  $('#book').innerHTML = books.length ? `<div class="list">${books.map((b) => `<div class="item click" data-go="booking"><span class="when">${ymd(b.datetime) === t0 ? '' : '내일 '}${fmtTime(b.datetime)}</span><div><div class="t">${esc(b.name)}</div><div class="s">${esc(b.product || '')}</div></div></div>`).join('')}</div>` : '<div class="muted small">예약이 없거나 아직 가져오지 않았어요. <a href="#" data-go="booking">예약 가져오기</a></div>';
+  $('#follow').innerHTML = (follow.length || newLeads.length) ? `<div class="list">${follow.slice(0, 5).map((c) => `<div class="item click" data-go="consult" data-p='{"id":"${c.id}"}'><span class="badge warn">후속</span><div class="t">${nm(c)}</div><span class="spacer"></span><span class="s">${esc(c.followUpDate)}</span></div>`).join('')}${newLeads.slice(0, 5).map((c) => `<div class="item click" data-go="crm" data-p='{"id":"${c.id}"}'><span class="badge blue">새 문의</span><div class="t">${esc(c.name)}</div><span class="spacer"></span><span class="s">${esc(c.source || '')}</span></div>`).join('')}</div>` : '<div class="muted small">할 일이 없습니다.</div>';
+  const max = Math.max(1, ...STAGES.map((s) => contacts.filter((c) => c.stage === s).length));
+  $('#stages').innerHTML = STAGES.map((s) => { const k = contacts.filter((c) => c.stage === s).length; return `<div class="row small"><span style="width:64px">${s}</span><div class="bar" style="flex:1"><i style="width:${(k / max) * 100}%"></i></div><b style="width:28px;text-align:right">${k}</b></div>`; }).join('');
+  $('#unpaid').innerHTML = od.length ? `<div class="stat"><b>${won(od.reduce((s, i) => s + i.amount - paid(i), 0))}</b><span>${od.length}건 · ${[...new Set(od.map((i) => i.name))].slice(0, 5).join(', ')}</span></div><div class="row"><button class="btn sm" data-go="billing">수강료 열기</button><button class="btn sm" data-go="kakao" data-p='{"segment":"unpaid"}'>💬 미납 안내</button></div>` : '<div class="muted small">기한 지난 미납이 없습니다.</div>';
+  let aiHtml = '';
+  try { const j = await api('/__studio/api/jobs'); const run = j.jobs.filter((x) => x.status === 'running'); aiHtml += run.length ? run.map((x) => `<div class="small"><span class="spin"></span> ${esc(x.title)}</div>`).join('') : '<div class="small muted">진행 중인 AI 작업 없음</div>'; } catch {}
+  try { const s = await api('/__studio/api/seo'); aiHtml += s.date ? `<div class="small">SEO 점검 ${esc(s.date)} · 보강 필요 ${s.refresh_candidates.length}편${s.new_topics?.length ? ` · 새 주제 ${s.new_topics.length}` : ''}</div>` : '<div class="small muted">SEO 점검 기록 없음</div>'; } catch {}
+  $('#ai').innerHTML = aiHtml + '<div class="row"><button class="btn sm" data-work="column">칼럼·SEO</button><button class="btn sm" data-work="manager">매니저</button></div>';
+  bind();
+  // 소셜 지표 (연결된 경우만)
+  try { const st = await K.integrations();
+    if (st.status.youtube) api('/__studio/api/youtube').then((d) => addStat('유튜브 구독자', n(d.channel.subscribers), 'youtube')).catch(() => {});
+    if (st.status.instagram) api('/__studio/api/instagram').then((d) => addStat('인스타 팔로워', n(d.profile.followers_count), 'instagram')).catch(() => {});
+  } catch {}
+}
+function addStat(label, value, app) { const b = document.createElement('button'); b.className = 'card stat'; b.style.cssText = 'text-align:left;cursor:pointer'; b.dataset.go = app; b.innerHTML = `<span>${label}</span><b>${value}</b>`; $('#stats').appendChild(b); bind(); }
+function bind() {
+  $$('[data-go]').forEach((el) => (el.onclick = (e) => { e.preventDefault(); open(el.dataset.go, el.dataset.p ? JSON.parse(el.dataset.p) : {}); }));
+  $$('[data-work]').forEach((el) => (el.onclick = () => openWork(el.dataset.work)));
+}
+const h = new Date().getHours(); $('#hello').textContent = h < 12 ? '좋은 아침이에요' : h < 18 ? '오늘도 힘내요' : '오늘 하루 수고했어요';
+load(); setInterval(load, 60000);
+window.addEventListener('focus', load);
+</script></body></html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>네이버 예약</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script>
+<style>.drop { border: 2px dashed var(--line-2); border-radius: var(--r); padding: 18px; text-align: center; color: var(--muted); } .drop.on { border-color: var(--accent-2); background: var(--soft); }</style></head>
+<body><div class="page">
+  <div class="head"><h1>네이버 예약</h1><span class="sub" id="sum"></span><span class="spacer"></span>
+    <a class="btn" id="partner" href="https://partner.booking.naver.com" target="_blank" rel="noopener">예약 파트너센터 ↗</a>
+    <a class="btn" id="place" href="https://new.smartplace.naver.com" target="_blank" rel="noopener">스마트플레이스 ↗</a></div>
+  <div class="drop" id="drop"><b>예약 엑셀(또는 CSV)을 여기에 끌어다 놓기</b><br><span class="small">네이버 예약 파트너센터 › 예약자 관리 › 기간 선택 › 엑셀 다운로드 → 받은 파일을 놓으면 예약번호 기준으로 합쳐집니다.</span><br><label class="btn sm" style="margin-top:8px">파일 고르기<input type="file" id="file" accept=".xlsx,.xls,.csv" hidden></label></div>
+  <div class="row"><div class="seg" id="view"><button data-v="today" aria-pressed="true">오늘·내일</button><button data-v="up" aria-pressed="false">앞으로</button><button data-v="past" aria-pressed="false">지난 예약</button></div><span class="spacer"></span><span class="small muted" id="last"></span></div>
+  <div id="out"></div>
+</div>
+<script>
+const { $, $$, esc, db, toast, ymd, fmtDT, addDays, phone, open } = K;
+const B = db('bookings'), C = db('contacts'), CS = db('consults');
+let bookings = [], contacts = [], consults = [], view = 'today';
+
+async function load() {
+  [bookings, contacts, consults] = await Promise.all([B.list(), C.list(), CS.list()]);
+  bookings.sort((a, b) => String(a.datetime).localeCompare(String(b.datetime)));
+  try { const s = await K.integrations(); if (s.config?.naver?.placeUrl) $('#place').href = s.config.naver.placeUrl; if (s.config?.naver?.bookingUrl) $('#partner').href = s.config.naver.bookingUrl; } catch {}
+  render();
+}
+const matchContact = (b) => { const p = phone(b.phone); return p ? contacts.find((c) => c.phone === p || c.guardianPhone === p) : null; };
+function render() {
+  const now = new Date(), t0 = ymd(now), t1 = ymd(addDays(now, 1));
+  const active = bookings.filter((b) => !/취소/.test(b.status || ''));
+  const rows = view === 'today' ? active.filter((b) => [t0, t1].includes(ymd(b.datetime))) : view === 'up' ? active.filter((b) => new Date(b.datetime) >= now) : bookings.filter((b) => new Date(b.datetime) < now).reverse();
+  $('#sum').textContent = `오늘 ${active.filter((b) => ymd(b.datetime) === t0).length}건 · 내일 ${active.filter((b) => ymd(b.datetime) === t1).length}건 · 앞으로 ${active.filter((b) => new Date(b.datetime) >= now).length}건`;
+  const lastImport = bookings.map((b) => b.importedAt).filter(Boolean).sort().pop();
+  $('#last').textContent = lastImport ? `마지막 가져오기 ${fmtDT(lastImport)}` : '아직 가져온 예약이 없습니다';
+  K.table($('#out'), rows, [
+    { label: '일시', render: (b) => `<b>${fmtDT(b.datetime)}</b>` }, { label: '예약자', render: (b) => esc(b.name) },
+    { label: '상품', k: 'product' }, { label: '상태', render: (b) => `<span class="badge ${/취소/.test(b.status) ? 'danger' : /확정|완료/.test(b.status) ? 'ok' : 'blue'}">${esc(b.status || '-')}</span>` },
+    { label: '연락처', render: (b) => esc(phone(b.phone)) }, { label: '요청사항', render: (b) => `<span class="small">${esc((b.memo || '').slice(0, 40))}</span>` },
+    { label: '', render: (b) => { const c = matchContact(b); const linked = consults.some((x) => x.bookingId === b.id);
+      return `${c ? `<button class="btn sm" data-crm="${c.id}">CRM: ${esc(c.name)}</button>` : ''}${linked ? '<span class="badge ok">상담 등록됨</span>' : `<button class="btn sm" data-cs="${b.id}">상담으로 등록</button>`}`; } },
+  ]);
+  $$('[data-crm]').forEach((x) => (x.onclick = () => open('crm', { id: x.dataset.crm })));
+  $$('[data-cs]').forEach((x) => (x.onclick = () => { const b = bookings.find((y) => y.id === x.dataset.cs); const c = matchContact(b);
+    open('consult', { new: 1, contactId: c?.id || '', name: b.name, phone: b.phone, datetime: String(b.datetime).slice(0, 16), source: '네이버 예약', bookingId: b.id }); }));
+}
+
+/* 가져오기 */
+const COLS = { bookingNo: ['예약번호', '예약 번호'], name: ['예약자명', '예약자', '이름', '고객명'], phone: ['전화번호', '연락처', '휴대폰', '예약자 연락처'], datetime: ['이용일시', '예약일시', '방문일시', '이용 일시', '일시', '예약일'], time: ['이용시간', '예약시간', '시간'], product: ['상품명', '상품', '서비스', '메뉴'], status: ['상태', '예약상태', '예약 상태'], memo: ['요청사항', '메모', '요청 사항', '고객 요청사항'] };
+function parseWhen(v, t) {
+  const s = `${v ?? ''} ${t ?? ''}`;
+  if (v instanceof Date) return v.toISOString();
+  const m = s.match(/(\d{2,4})[.\-/년\s]+(\d{1,2})[.\-/월\s]+(\d{1,2})/); if (!m) return '';
+  let y = +m[1]; if (y < 100) y += 2000;
+  const tm = s.match(/(오전|오후|AM|PM)?\s*(\d{1,2}):(\d{2})/i); let h = tm ? +tm[2] : 0; const mi = tm ? +tm[3] : 0;
+  if (tm && /오후|PM/i.test(tm[1] || '') && h < 12) h += 12; if (tm && /오전|AM/i.test(tm[1] || '') && h === 12) h = 0;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${y}-${p(+m[2])}-${p(+m[3])}T${p(h)}:${p(mi)}`;
+}
+function toItems(rows) {
+  const hi = rows.findIndex((r) => r.some((c) => COLS.name.includes(String(c).trim())));
+  if (hi < 0) throw new Error('"예약자명" 열을 찾지 못했습니다. 네이버 예약 엑셀이 맞는지 확인해 주세요.');
+  const head = rows[hi].map((h) => String(h).trim());
+  const idx = Object.fromEntries(Object.entries(COLS).map(([k, names]) => [k, head.findIndex((h) => names.includes(h))]));
+  const at = new Date().toISOString();
+  return rows.slice(hi + 1).map((r) => {
+    const g = (k) => (idx[k] >= 0 ? r[idx[k]] : '');
+    const datetime = parseWhen(g('datetime'), g('time'));
+    return { bookingNo: String(g('bookingNo') || '').trim() || `${g('name')}-${datetime}`, name: String(g('name') || '').trim(), phone: phone(String(g('phone') || '')), datetime, product: String(g('product') || ''), status: String(g('status') || ''), memo: String(g('memo') || ''), source: 'naver', importedAt: at };
+  }).filter((x) => x.name && x.datetime);
+}
+async function readFile(f) {
+  if (/\.csv$/i.test(f.name)) { const txt = await f.text(); return txt.split(/\r?\n/).map((l) => l.split(',').map((c) => c.replace(/^"|"$/g, ''))); }
+  if (!window.XLSX) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload = res; s.onerror = () => rej(new Error('엑셀 읽기 도구를 불러오지 못했습니다. 인터넷 연결을 확인하거나 CSV로 저장해 올려 주세요.')); document.head.appendChild(s); });
+  const wb = XLSX.read(await f.arrayBuffer(), { cellDates: true });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+}
+async function importFile(f) {
+  try {
+    const items = toItems(await readFile(f));
+    if (!items.length) return toast('가져올 예약이 없습니다');
+    const r = await B.bulk(items, 'bookingNo'); toast(`예약 ${r.added}건 추가 · ${r.updated}건 갱신`); load();
+  } catch (e) { toast(e.message); }
+}
+$('#file').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f); };
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('on'); }));
+['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, () => drop.classList.remove('on')));
+drop.addEventListener('drop', (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) importFile(f); });
+$$('#view button').forEach((b) => (b.onclick = () => { view = b.dataset.v; $$('#view button').forEach((x) => x.setAttribute('aria-pressed', x === b)); render(); }));
+load();
+</script></body></html>

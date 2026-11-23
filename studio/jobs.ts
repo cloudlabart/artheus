@@ -8,12 +8,13 @@
  *   new:<id>        새 칼럼 만들기(새 폴더라 서로 겹치지 않음)
  *   seo             주제 추천 등 리포트 작업
  *   manager         매니저(무엇이든 고칠 수 있음) — 다른 모든 작업과 겹침. 대신 안에서 서브에이전트를 병렬로 씀
+ *   assist:<id>     AI 도우미(광고 대본·웹진·메시지 초안 JSON) — 파일을 고치지 않아 아무것과도 겹치지 않음
  * 작업 기록은 메모리에 두고 화면이 폴링(since=seq)으로 받아 간다. 서브에이전트(Task) 이벤트는 parent 로 묶는다.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 
-export type JobKind = 'page' | 'column' | 'manager';
+export type JobKind = 'page' | 'column' | 'manager' | 'assist';
 export type JobStatus = 'running' | 'done' | 'error' | 'stopped';
 
 export interface JobEvent { seq: number; t: number; kind: string; [k: string]: unknown }
@@ -27,6 +28,7 @@ export interface Job {
 }
 
 export function lanesConflict(a: string, b: string) {
+  if (a.startsWith('assist:') || b.startsWith('assist:')) return a === b;
   if (a === 'manager' || b === 'manager') return true;
   return a === b;
 }

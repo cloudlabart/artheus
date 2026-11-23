@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인스타그램</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1>인스타그램</h1><span class="sub" id="who"></span><span class="spacer"></span>
+    <a class="btn" href="https://www.instagram.com/artheus_act/" target="_blank" rel="noopener">@artheus_act ↗</a>
+    <button class="btn" id="webzine">🗞 웹진 만들기</button><button class="btn" id="reload">새로고침</button></div>
+  <div id="out"><div class="muted"><span class="spin"></span> 불러오는 중…</div></div>
+</div>
+<script>
+const { $, esc, api, fmtDate } = K;
+const n = (x) => (+x || 0).toLocaleString('ko-KR');
+async function load() {
+  try {
+    const d = await api('/__studio/api/instagram'); const p = d.profile;
+    $('#who').textContent = '@' + p.username;
+    const avg = d.media.length ? Math.round(d.media.reduce((s, m) => s + (m.like_count || 0) + (m.comments_count || 0), 0) / d.media.length) : 0;
+    $('#out').innerHTML = `<div class="grid g4">${[['팔로워', n(p.followers_count)], ['팔로잉', n(p.follows_count)], ['게시물', n(p.media_count)], ['최근 평균 반응', n(avg)]].map(([a, b]) => `<div class="card stat"><span>${a}</span><b>${b}</b></div>`).join('')}</div>
+      <div class="card"><h2>최근 게시물 <small>반응 = 좋아요 + 댓글</small></h2><div class="thumbs">${d.media.map((m) => `<a href="${esc(m.permalink)}" target="_blank" rel="noopener"><img src="${esc(m.thumbnail_url || m.media_url)}" alt="" loading="lazy"><span>${fmtDate(m.timestamp)} · ${m.media_type === 'CAROUSEL_ALBUM' ? '캐러셀' : m.media_type === 'VIDEO' ? '릴스·영상' : '사진'}</span><span class="muted">♥ ${n(m.like_count)} · 💬 ${n(m.comments_count)}</span></a>`).join('')}</div></div>`;
+  } catch (e) {
+    $('#out').innerHTML = `<div class="notice warn">${esc(e.message)}</div>
+      <div class="notice"><b>연결 방법 (Instagram Graph API)</b><br>1. 인스타그램 계정을 <b>프로페셔널(비즈니스·크리에이터)</b>으로 바꾸고 페이스북 페이지와 연결합니다.<br>2. developers.facebook.com 에서 앱을 만들고 Instagram Graph API를 추가합니다.<br>3. Graph API 탐색기에서 <code>instagram_basic, instagram_manage_insights, pages_show_list</code> 권한으로 토큰을 받고, 장기 토큰(60일)으로 바꿉니다.<br>4. <code>me/accounts</code> → 페이지의 <code>instagram_business_account</code> ID를 확인합니다.<br>5. <a href="#" id="go">설정 › 인스타그램</a>에 토큰과 ID를 넣습니다. 토큰은 60일마다 새로 받아야 해요.</div>`;
+    $('#go').onclick = (ev) => { ev.preventDefault(); K.open('settings'); };
+  }
+}
+$('#webzine').onclick = () => K.open('webzine');
+$('#reload').onclick = load; load();
+</script></body></html>

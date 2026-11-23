@@ -428,7 +428,7 @@ const composer = document.querySelector('.composer');
 composer.addEventListener('drop', (e) => { e.preventDefault(); addFiles([...e.dataTransfer.files]); });
 
 let mode = 'page', curSlug = null, colData = { columns: [] }, seo = {};
-const KIND_LABEL = { page: '페이지', column: '칼럼', manager: '매니저' };
+const KIND_LABEL = { page: '페이지', column: '칼럼', manager: '매니저', assist: 'AI 도우미' };
 
 /* ── 작업(Job): 요청마다 하나씩, 여러 개가 동시에 돕니다 ── */
 function newCtx() { return { ai: null, body: null, tools: null, meta: null, text: '', edited: new Set(), agents: new Map() }; }
@@ -484,7 +484,7 @@ function renderJobs() {
 }
 async function openJob(id, { append = false } = {}) {
   const j = jobs.find((x) => x.id === id);
-  if (j && j.kind !== mode) setMode(j.kind, { keepLog: true });
+  if (j && j.kind !== mode && ['page', 'column', 'manager'].includes(j.kind)) setMode(j.kind, { keepLog: true });
   if (j && j.kind === 'column' && j.slug && j.slug !== curSlug) { curSlug = j.slug; renderSel(); previewColumn(); }
   viewJob = id; lastSeq = 0; rctx = newCtx();
   if (!append) log.innerHTML = '';
@@ -671,7 +671,8 @@ let tt; function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden =
 
 fit(); refreshStatus();
 try { curSlug = localStorage.getItem('studio-col'); } catch {}
-let startMode = 'page'; try { startMode = localStorage.getItem('studio-mode') || 'page'; } catch {}
+let startMode = new URLSearchParams(location.search).get('mode') || 'page'; try { if (!new URLSearchParams(location.search).get('mode')) startMode = localStorage.getItem('studio-mode') || 'page'; } catch {}
+window.addEventListener('message', (e) => { if (e.origin === location.origin && e.data?.type === 'studio:params' && ['page', 'column', 'manager'].includes(e.data.params?.mode)) setMode(e.data.params.mode); });
 setMode(['column', 'manager'].includes(startMode) ? startMode : 'page');
 poll();
 })();

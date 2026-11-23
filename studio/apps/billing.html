@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>수강료</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
+<body><div class="page">
+  <div class="head"><h1>수강료</h1><div class="row"><button class="btn sm" id="prev">‹</button><b id="mon"></b><button class="btn sm" id="next">›</button></div><span class="spacer"></span>
+    <button class="btn" id="gen" title="수강중이고 월 수강료가 있는 원생에게 이 달 청구를 만듭니다">이 달 청구 만들기</button>
+    <button class="btn" id="one">+ 개별 청구</button><button class="btn" id="export">내보내기</button></div>
+  <div class="grid g4" id="stats"></div>
+  <div class="grid g2">
+    <div class="card"><h2>최근 6개월 수납</h2><div class="bars" id="chart"></div></div>
+    <div class="card"><h2>미납 (기한 지남) <small id="odsum"></small></h2><div id="overdue"></div><div class="row"><button class="btn sm" id="remind">💬 미납 안내 보내기</button></div></div>
+  </div>
+  <div id="out"></div>
+</div>
+<script>
+const { $, $$, esc, db, form, toast, won, month, ymd, phone, open, download } = K;
+const INV = db('invoices'), C = db('contacts');
+const METHODS = ['계좌이체', '카드', '현금', '결제선생', '제로페이', '기타'];
+let invoices = [], contacts = [], cur = month(), dueDay = 10, filterContact = null;
+const paid = (i) => (i.payments || []).reduce((s, p) => s + (+p.amount || 0), 0);
+const statusOf = (i) => paid(i) <= 0 ? '미납' : paid(i) >= i.amount ? '완납' : '부분 납부';
+const shift = (m, n) => { const [y, mo] = m.split('-').map(Number); const d = new Date(y, mo - 1 + n, 1); return month(d); };
+
+async function load() {
+  [invoices, contacts] = await Promise.all([INV.list(), C.list()]);
+  try { const s = await K.integrations(); dueDay = Number(s.config?.academy?.dueDay) || 10; } catch {}
+  render();
+}
+function render() {
+  $('#mon').textContent = cur.replace('-', '년 ') + '월';
+  const mine = invoices.filter((i) => i.month === cur && (!filterContact || i.contactId === filterContact));
+  const billed = mine.reduce((s, i) => s + (+i.amount || 0), 0), got = mine.reduce((s, i) => s + paid(i), 0);
+  const unpaidN = mine.filter((i) => statusOf(i) !== '완납').length;
+  $('#stats').innerHTML = [['청구', won(billed)], ['수납', won(got)], ['미납', won(billed - got)], ['미납 인원', unpaidN + '명']].map(([a, b]) => `<div class="card stat"><span>${a}</span><b>${b}</b></div>`).join('');
+  // 차트: 납부일 기준
+  const months = [...Array(6)].map((_, i) => shift(month(), i - 5));
+  const sums = months.map((m) => invoices.flatMap((i) => i.payments || []).filter((p) => String(p.date).startsWith(m)).reduce((s, p) => s + (+p.amount || 0), 0));
+  const max = Math.max(1, ...sums);
+  $('#chart').innerHTML = months.map((m, i) => `<div title="${won(sums[i])}"><i style="height:${Math.round((sums[i] / max) * 100)}px"></i>${+m.slice(5)}월</div>`).join('');
+  const od = invoices.filter((i) => statusOf(i) !== '완납' && i.dueDate && i.dueDate < ymd());
+  $('#odsum').textContent = od.length ? `${od.length}건 · ${won(od.reduce((s, i) => s + i.amount - paid(i), 0))}` : '';
+  $('#overdue').innerHTML = od.length ? `<div class="list">${od.slice(0, 8).map((i) => `<div class="item click" data-id="${i.id}"><div><div class="t">${esc(i.name)}</div><div class="s">${esc(i.month)} ${esc(i.item || '')} · 기한 ${esc(i.dueDate)}</div></div><span class="spacer"></span><b>${won(i.amount - paid(i))}</b></div>`).join('')}</div>` : '<div class="muted small">기한이 지난 미납이 없습니다.</div>';
+  $$('#overdue .item').forEach((el) => (el.onclick = () => pay(invoices.find((i) => i.id === el.dataset.id))));
+  $('#remind').disabled = !od.length;
+  K.table($('#out'), mine.sort((a, b) => a.name.localeCompare(b.name)), [
+    { label: '이름', render: (i) => `<b>${esc(i.name)}</b>` }, { label: '항목', k: 'item' },
+    { label: '청구액', num: true, render: (i) => won(i.amount) }, { label: '납부액', num: true, render: (i) => won(paid(i)) },
+    { label: '상태', render: (i) => { const s = statusOf(i); return `<span class="badge ${s === '완납' ? 'ok' : s === '미납' && i.dueDate < ymd() ? 'danger' : 'warn'}">${s}</span>`; } },
+    { label: '납부', render: (i) => esc((i.payments || []).map((p) => `${p.date.slice(5)} ${p.method}`).join(', ')) },
+    { label: '기한', k: 'dueDate' },
+    { label: '', render: (i) => `<button class="btn sm" data-pay="${i.id}">납부 기록</button>` },
+  ], (i) => editInv(i));
+  $$('[data-pay]').forEach((b) => (b.onclick = () => pay(invoices.find((i) => i.id === b.dataset.pay))));
+}
+async function pay(i) {
+  const v = await form({ title: `${i.name} · ${i.month} 납부 기록`, note: `청구 ${won(i.amount)} · 이미 낸 금액 ${won(paid(i))}`, fields: [
+    { k: 'date', label: '납부일', type: 'date', default: ymd(), required: true },
+    { k: 'amount', label: '금액', type: 'number', default: i.amount - paid(i), required: true },
+    { k: 'method', label: '방법', type: 'select', options: METHODS },
+    { k: 'memo', label: '메모(영수증 번호 등)' },
+  ] });
+  if (!v) return;
+  const payments = [...(i.payments || []), v];
+  const next = { ...i, payments }; next.status = statusOf(next);
+  await INV.put(i.id, { payments, status: next.status }); toast(`${i.name}: ${next.status}`); load();
+}
+async function editInv(i, preset = {}) {
+  const names = contacts.filter((c) => ['등록', '수강중', '휴원'].includes(c.stage)).map((c) => c.name);
+  const v = await form({ title: i ? '청구 수정' : '개별 청구', danger: i ? '삭제' : null, values: i || preset, fields: [
+    { k: 'name', label: '원생 이름', required: true, ph: names.slice(0, 3).join(', ') },
+    { k: 'month', label: '청구 월', type: 'month', default: cur, required: true },
+    { k: 'item', label: '항목', default: '수강료', ph: '수강료 / 교재비 / 특강비' },
+    { k: 'amount', label: '금액', type: 'number', required: true },
+    { k: 'dueDate', label: '납부 기한', type: 'date', default: `${cur}-${String(dueDay).padStart(2, '0')}` },
+    { k: 'memo', label: '메모' },
+  ] });
+  if (!v) return;
+  if (v.__delete) { await INV.del(i.id); toast('삭제했습니다'); return load(); }
+  const ct = contacts.find((c) => c.name === v.name);
+  if (!ct && !confirm('CRM에 없는 이름입니다. 그래도 청구할까요?')) return;
+  const rec = { ...v, contactId: ct?.id || i?.contactId || '' };
+  if (i) await INV.put(i.id, { ...rec, status: statusOf({ ...i, ...rec }) }); else await INV.add({ ...rec, payments: [], status: '미납' });
+  toast('저장했습니다'); load();
+}
+$('#gen').onclick = async () => {
+  const targets = contacts.filter((c) => c.stage === '수강중' && +c.fee > 0 && !invoices.some((i) => i.month === cur && i.contactId === c.id && (i.item || '수강료') === '수강료'));
+  if (!targets.length) return toast('새로 청구할 원생이 없습니다 (단계 "수강중" + 월 수강료가 있는 원생 대상)');
+  if (!confirm(`${cur} 수강료를 ${targets.length}명에게 청구할까요?\n${targets.map((c) => `${c.name} ${won(c.fee)}`).join('\n')}`)) return;
+  const due = `${cur}-${String(dueDay).padStart(2, '0')}`;
+  for (const c of targets) await INV.add({ contactId: c.id, name: c.name, month: cur, item: '수강료', program: c.program, amount: +c.fee, dueDate: due, payments: [], status: '미납' });
+  toast(`${targets.length}건 청구했습니다`); load();
+};
+$('#one').onclick = () => editInv(null);
+$('#prev').onclick = () => { cur = shift(cur, -1); render(); };
+$('#next').onclick = () => { cur = shift(cur, 1); render(); };
+$('#remind').onclick = () => open('kakao', { segment: 'unpaid' });
+$('#export').onclick = () => {
+  const rows = invoices.filter((i) => i.month === cur).map((i) => [i.name, i.month, i.item, i.amount, paid(i), statusOf(i), i.dueDate, (i.payments || []).map((p) => `${p.date} ${p.method} ${p.amount}`).join(' / ')]);
+  const csv = [['이름', '월', '항목', '청구액', '납부액', '상태', '기한', '납부내역'], ...rows].map((r) => r.map((x) => `"${String(x ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  download(`artheus-tuition-${cur}.csv`, new Blob(['﻿' + csv], { type: 'text/csv' }));
+};
+window.onParams = (p) => { filterContact = p.contactId || null; if (filterContact) toast('한 원생의 청구만 보는 중 · 다시 열면 전체'); render(); };
+load().then(() => window.onParams(Object.fromEntries(new URLSearchParams(location.search))));
+</script></body></html>
