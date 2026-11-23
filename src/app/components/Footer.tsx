@@ -121,6 +121,7 @@ export function Footer() {
             © 2026 artheus. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
+            <a href="/privacy/" className="text-xs font-semibold text-[#35526B] hover:text-[#153956] transition-colors">개인정보처리방침</a>
             <button
               onClick={() => navigate('/admin')}
               className="text-xs text-[#5B7285] hover:text-[#153956] transition-colors"
