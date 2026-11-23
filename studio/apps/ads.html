@@ -165,7 +165,8 @@ $('#new').onclick = async () => {
   $('#editor').innerHTML = '<div class="card"><span class="spin"></span> AI가 장면별 대본을 쓰는 중이에요… <span id="st" class="small muted"></span></div>';
   try {
     const r = await ai('ad', v, (s) => { const e = $('#st'); if (e) e.textContent = s; });
-    const saved = await A.add({ ...r, brief: v, theme: 'navy', scenes: (r.scenes || []).map((s) => ({ ...s, seconds: Math.max(1, Math.min(15, +s.seconds || 3)) })) });
+    const scenes = (r.scenes || []).map((s) => ({ ...s, seconds: Math.max(1, Math.min(15, +s.seconds || 3)) }));
+    const saved = await A.add({ ...r, brief: v, theme: 'navy', scenes, aiOriginal: JSON.parse(JSON.stringify({ caption: r.caption, scenes })) });
     await load(); openAd(saved);
   } catch (e) { $('#editor').innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; }
 };

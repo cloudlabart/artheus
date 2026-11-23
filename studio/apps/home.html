@@ -44,6 +44,7 @@ async function load() {
   let aiHtml = '';
   try { const j = await api('/__studio/api/jobs'); const run = j.jobs.filter((x) => x.status === 'running'); aiHtml += run.length ? run.map((x) => `<div class="small"><span class="spin"></span> ${esc(x.title)}</div>`).join('') : '<div class="small muted">진행 중인 AI 작업 없음</div>'; } catch {}
   try { const s = await api('/__studio/api/seo'); aiHtml += s.date ? `<div class="small">SEO 점검 ${esc(s.date)} · 보강 필요 ${s.refresh_candidates.length}편${s.new_topics?.length ? ` · 새 주제 ${s.new_topics.length}` : ''}</div>` : '<div class="small muted">SEO 점검 기록 없음</div>'; } catch {}
+  try { const st = await api('/__studio/api/style'); aiHtml += st.needsUpdate ? `<div class="small"><span class="badge warn">새 분기</span> ${esc(st.quarter)} 문체 학습 필요 · 첨삭 ${st.pending}건 <a href="#" data-go="style">문체 열기</a></div>` : `<div class="small">문체 ${esc(st.meta.version || '')} 적용 중 · 새 첨삭 ${st.pending}건</div>`; } catch {}
   $('#ai').innerHTML = aiHtml + '<div class="row"><button class="btn sm" data-work="column">칼럼·SEO</button><button class="btn sm" data-work="manager">매니저</button></div>';
   bind();
   // 소셜 지표 (연결된 경우만)

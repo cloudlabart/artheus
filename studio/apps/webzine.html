@@ -12,7 +12,7 @@
 @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .sl { grid-template-columns: 1fr; } }
 </style></head>
 <body><div class="page">
-  <div class="head"><h1>웹진</h1><span class="sub">인스타그램 캐러셀(1080×1350) 카드뉴스</span><span class="spacer"></span><button class="btn primary" id="new">+ 새 웹진</button></div>
+  <div class="head"><h1>웹진</h1><span class="sub">인스타그램 캐러셀(1080×1350) 카드뉴스 · AI 문구를 고치면 배준우 문체 학습 자료로 쌓여요</span><span class="spacer"></span><button class="btn primary" id="new">+ 새 웹진</button></div>
   <div class="wrap">
     <div class="card"><h2>목록</h2><div id="list" class="list"></div></div>
     <div id="editor"><div class="empty">왼쪽에서 웹진을 고르거나 새로 만드세요. 칼럼 하나를 고르면 AI가 7–9장짜리 캐러셀로 정리해 줍니다.</div></div>
@@ -146,7 +146,7 @@ $('#new').onclick = async () => {
   if (v.mode === 'AI로 만들기') {
     if (!topic) return toast('칼럼이나 주제를 넣어 주세요');
     $('#editor').innerHTML = '<div class="card"><span class="spin"></span> AI가 슬라이드를 쓰는 중이에요… (1–3분) <span id="st" class="small muted"></span></div>';
-    try { data = { ...data, ...(await ai('webzine', { topic, slug: v.slug || undefined }, (s) => { const e = $('#st'); if (e) e.textContent = s; })) }; data.theme = 'ivory'; }
+    try { data = { ...data, ...(await ai('webzine', { topic, slug: v.slug || undefined }, (s) => { const e = $('#st'); if (e) e.textContent = s; })) }; data.theme = 'ivory'; data.aiOriginal = JSON.parse(JSON.stringify({ caption: data.caption, slides: data.slides })); }
     catch (e) { $('#editor').innerHTML = `<div class="notice warn">${esc(e.message)}</div>`; return; }
   }
   const saved = await W.add({ ...data, sourceSlug: v.slug || '' }); await load(); openW(saved);

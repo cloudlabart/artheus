@@ -10,6 +10,7 @@ tools: Read, Write, Edit, WebSearch, WebFetch, Glob
 - 전달받은 `brief.md`
 - `tools/geo-seo/references/geo-seo-playbook.md`
 - `tools/geo-seo/templates/article.md` (frontmatter 키 전부)
+- `content/style/voice.md` — **배준우 문체 가이드. 모든 문장을 이 말투로 쓴다(가이드가 다른 톤 규칙보다 우선).**
 - 작업 폴더 `content/geo-seo.config.json` (author, author_bio, tone, audience, site_domain, brand)
 
 ## 쓰기 규칙

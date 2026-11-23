@@ -127,6 +127,9 @@
   }
   async function ai(task, input, onStatus = () => {}) {
     const { id } = await api('/__studio/api/ai', { method: 'POST', body: { task, input } });
+    return waitJob(id, onStatus);
+  }
+  async function waitJob(id, onStatus = () => {}) {
     let since = 0, result = null;
     for (;;) {
       await new Promise((r) => setTimeout(r, 1200));
@@ -146,5 +149,5 @@
   function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
   async function copy(text) { try { await navigator.clipboard.writeText(text); toast('복사했습니다'); } catch { prompt('복사해서 쓰세요', text); } }
 
-  window.K = { $, $$, esc, api, db, ymd, month, fmtDate, fmtTime, fmtDT, won, phone, sameDay, addDays, STAGES, SOURCES, PROGRAMS, stageBadge, open, openWork, param, toast, drawer, form, table, ai, integrations, download, copy, inShell };
+  window.K = { $, $$, esc, api, db, ymd, month, fmtDate, fmtTime, fmtDT, won, phone, sameDay, addDays, STAGES, SOURCES, PROGRAMS, stageBadge, open, openWork, param, toast, drawer, form, table, ai, waitJob, integrations, download, copy, inShell };
 })();

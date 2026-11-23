@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>문체</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script>
+<style>
+.md { white-space: pre-wrap; font-size: 13.5px; line-height: 1.75; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; max-height: 60vh; overflow: auto; }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+.pair div { padding: 8px 10px; border-radius: 9px; white-space: pre-wrap; line-height: 1.6; }
+.pair .b { background: var(--danger-soft); } .pair .a { background: var(--ok-soft); }
+textarea.big { min-height: 60vh; font-size: 13.5px; line-height: 1.7; }
+@media (max-width: 900px) { .cmp, .pair { grid-template-columns: 1fr; } }
+</style></head>
+<body><div class="page">
+  <div class="head"><h1>배준우 문체</h1><span class="sub" id="ver"></span><span class="spacer"></span>
+    <button class="btn" id="addEdit">+ 첨삭 넣기</button><button class="btn" id="addWriting">+ 직접 쓴 글</button><button class="btn primary" id="learn">이번 분기 학습</button></div>
+  <div id="status"></div>
+  <div id="draft"></div>
+  <div class="grid g2">
+    <div class="card"><h2>지금 적용 중인 가이드 <small>웹진·광고·칼럼·메시지·서버 현행화가 이 말투로 씁니다</small></h2><div class="md" id="guide"></div></div>
+    <div class="card"><h2>이번 분기에 쌓인 첨삭 <small id="cnt"></small></h2><div class="row" id="src"></div><div id="recent" class="list"></div></div>
+  </div>
+  <div class="card"><h2>지난 분기 기록</h2><div class="row" id="hist"></div><div id="histView"></div></div>
+  <div class="notice small">어떻게 쌓이나요? · 웹진·광고에서 AI 문구를 고치면 <b>원문 → 수정본</b>이 · 칼럼을 직접 고치면 바뀐 문단이 · 칼럼·매니저에 준 <b>수정 지시</b>가 · AI 초안을 고쳐 보낸 카카오 메시지가 자동으로 모입니다. 분기마다 <b>이번 분기 학습</b>을 누르면 AI가 반복되는 고침을 찾아 새 가이드 초안을 만들고, 검토 후 <b>적용</b>해야 실제로 바뀝니다. 학생 이름 같은 개인정보는 가이드에 넣지 않습니다.</div>
+</div>
+<script>
+const { $, $$, esc, api, toast, form, waitJob, fmtDT } = K;
+let st = null;
+async function load() {
+  st = await api('/__studio/api/style');
+  $('#ver').textContent = `${st.meta.version || '-'} · ${st.meta.appliedAt || ''} 적용`;
+  $('#status').innerHTML = st.needsUpdate ? `<div class="notice warn">새 분기(${esc(st.quarter)})예요. 지난 분기 첨삭 ${st.pending}건으로 문체를 학습해 주세요.</div>` : '';
+  $('#guide').textContent = st.guide || '아직 가이드가 없습니다.';
+  $('#cnt').textContent = `${st.pending}건 (마지막 학습 이후)`;
+  $('#src').innerHTML = Object.entries(st.bySource).map(([k, v]) => `<span class="badge blue">${esc(k)} ${v}</span>`).join('') || '<span class="muted small">아직 없습니다.</span>';
+  $('#recent').innerHTML = st.recent.map((x) => x.kind === 'edit'
+    ? `<div class="card" style="padding:10px;gap:6px"><div class="small muted">${esc(x.source)}${x.title ? ' · ' + esc(x.title) : ''}${x.field ? ' · ' + esc(x.field) : ''}</div><div class="pair"><div class="b">${esc(String(x.before).slice(0, 300))}</div><div class="a">${esc(String(x.after).slice(0, 300))}</div></div></div>`
+    : `<div class="item"><span class="badge">${x.kind === 'instruction' ? '지시' : '글'}</span><div class="small">${esc(String(x.after).slice(0, 160))}</div></div>`).join('');
+  $('#hist').innerHTML = st.history.map((h) => `<button class="btn sm" data-h="${esc(h)}">${esc(h.replace('.md', ''))}</button>`).join('');
+  $$('[data-h]').forEach((b) => (b.onclick = async () => { const t = await (await fetch(`/__studio/api/style/history/${b.dataset.h}`)).text(); $('#histView').innerHTML = `<div class="md">${esc(t)}</div>`; }));
+  renderDraft();
+}
+function renderDraft() {
+  const d = st.draft;
+  if (!d) { $('#draft').innerHTML = ''; return; }
+  $('#draft').innerHTML = `<div class="card"><h2>새 가이드 초안 <small>${esc(d.quarter)} · 첨삭 ${d.samples}건 · ${fmtDT(d.at)}</small></h2>
+    <div class="notice small" style="white-space:pre-wrap">${esc(d.summary)}</div>
+    ${(d.changes || []).length ? `<ul class="small">${d.changes.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}
+    <div class="cmp"><div><div class="small muted">지금 가이드</div><div class="md">${esc(st.guide)}</div></div><div><div class="small muted">새 초안 (고칠 수 있어요)</div><textarea class="in big" id="draftMd">${esc(d.markdown)}</textarea></div></div>
+    <div class="row"><button class="btn danger" id="discard">버리기</button><span class="spacer"></span><label class="f check"><input type="checkbox" id="push" checked>GitHub에도 올리기 (휴대폰·서버 작업에도 적용)</label><button class="btn primary" id="apply">적용</button></div></div>`;
+  $('#discard').onclick = async () => { if (!confirm('초안을 버릴까요?')) return; await api('/__studio/api/style/draft', { method: 'POST', body: { discard: true } }); load(); };
+  $('#apply').onclick = async () => {
+    if (!confirm('새 가이드를 적용할까요? 이후 모든 AI 글쓰기가 이 말투를 따릅니다.')) return;
+    try { const r = await api('/__studio/api/style/apply', { method: 'POST', body: { markdown: $('#draftMd').value, push: $('#push').checked } }); toast((r.steps || []).join(' · ')); load(); } catch (e) { toast(e.message); }
+  };
+}
+$('#learn').onclick = async (e) => {
+  if (st?.draft && !confirm('검토 중인 초안이 있습니다. 새로 학습할까요?')) return;
+  e.target.disabled = true;
+  try {
+    const { id, samples } = await api('/__studio/api/style/learn', { method: 'POST' });
+    $('#draft').innerHTML = `<div class="card"><span class="spin"></span> 첨삭 ${samples}건에서 문체를 배우는 중이에요… (2–5분, 다른 앱을 써도 됩니다) <span class="small muted" id="stt"></span></div>`;
+    const r = await waitJob(id, (s) => { const el = $('#stt'); if (el) el.textContent = s; });
+    await api('/__studio/api/style/draft', { method: 'POST', body: { ...r, samples } });
+    toast('새 가이드 초안이 나왔어요. 검토 후 적용하세요'); load();
+  } catch (err) { toast(err.message); $('#draft').innerHTML = `<div class="notice warn">${esc(err.message)}</div>`; }
+  e.target.disabled = false;
+};
+$('#addEdit').onclick = async () => {
+  const v = await form({ title: '첨삭 넣기', note: 'AI나 다른 사람이 쓴 문장(원문)과 배준우 대표가 고친 문장(수정본)을 넣어 주세요. 이유를 적으면 더 정확히 배웁니다.', fields: [
+    { k: 'source', label: '어디 글', type: 'select', options: ['칼럼', '웹진', '광고', '인스타 캡션', '카카오 메시지', '홈페이지', '기타'] },
+    { k: 'before', label: '원문', type: 'textarea', required: true }, { k: 'after', label: '수정본', type: 'textarea', required: true },
+    { k: 'note', label: '왜 고쳤나요? (선택)', ph: '예: 학생한테 거리감 있는 말투라서' }] });
+  if (!v) return; await api('/__studio/api/style/sample', { method: 'POST', body: { ...v, kind: 'edit' } }); toast('넣었습니다'); load();
+};
+$('#addWriting').onclick = async () => {
+  const v = await form({ title: '배준우 대표가 직접 쓴 글', note: '인스타 캡션, 수업 공지, 블로그 글처럼 대표가 직접 쓴 글을 붙여 넣으면 말투 자료가 됩니다.', fields: [
+    { k: 'source', label: '어디 글', type: 'select', options: ['인스타 캡션', '수업 공지', '블로그', '카카오 공지', '기타'] },
+    { k: 'title', label: '제목·메모 (선택)' }, { k: 'after', label: '글', type: 'textarea', required: true }] });
+  if (!v) return; await api('/__studio/api/style/sample', { method: 'POST', body: { ...v, kind: 'writing' } }); toast('넣었습니다'); load();
+};
+load();
+</script></body></html>

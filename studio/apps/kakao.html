@@ -35,7 +35,8 @@ const SEED = [
   { name: '수강료 안내', text: '[아터스] #{이름}님 #{월} 수강료 안내드려요.\n금액: #{금액}\n납부 기한: #{날짜}\n늘 함께해 주셔서 감사합니다.' },
   { name: '미납 안내', text: '[아터스] #{이름}님, #{월} 수강료 #{금액}이 아직 확인되지 않았어요.\n이미 납부하셨다면 이 메시지는 넘겨 주세요. 확인이 필요하면 채팅으로 알려 주세요.' },
 ];
-let templates = [], contacts = [], consults = [], invoices = [], picked = new Map(), connected = false, academy = '아터스';
+let templates = [], contacts = [], consults = [], invoices = [], picked = new Map(), connected = false, academy = '아터스', aiDraft = '';
+async function learnEdit() { const now = $('#text').value.trim(); if (aiDraft && now && now !== aiDraft.trim()) { try { await K.api('/__studio/api/style/sample', { method: 'POST', body: { kind: 'edit', source: '카카오 메시지', before: aiDraft, after: now } }); } catch {} aiDraft = ''; } }
 const paid = (i) => (i.payments || []).reduce((s, p) => s + (+p.amount || 0), 0);
 
 async function load() {
@@ -108,13 +109,13 @@ $('#send').onclick = async () => {
   if (!confirm(`${list.length}명에게 알림톡을 보냅니다. 비용이 발생할 수 있어요. 보낼까요?`)) return;
   try {
     const r = await K.api('/__studio/api/kakao/send', { method: 'POST', body: { templateId: tplId, messages: list.map((x) => ({ to: x.to, text: x.text, variables: x.variables, contactId: x.c.id, name: x.c.name })) } });
-    toast(`${r.count}건 발송 요청 완료`); renderLog();
+    toast(`${r.count}건 발송 요청 완료`); renderLog(); learnEdit();
   } catch (e) { toast(e.message); }
 };
 $('#copyAll').onclick = async () => {
   await copy(rows.map((r) => `▶ ${r.c.name} (${r.to || '번호 없음'})\n${r.text}`).join('\n\n'));
   for (const r of rows) await M.add({ channel: 'copy', contactId: r.c.id, name: r.c.name, text: r.text, at: new Date().toISOString() });
-  renderLog();
+  renderLog(); learnEdit();
 };
 $('#tplAdd').onclick = async () => {
   const v = await form({ title: '새 템플릿', fields: [{ k: 'name', label: '이름', required: true }, { k: 'templateId', label: '알림톡 템플릿 코드 (있으면)' }, { k: 'text', label: '문구', type: 'textarea', required: true, ph: '#{이름}님, …' }] });
@@ -124,7 +125,7 @@ window.onParams = (p) => {
   if (p.contactId) { const c = contacts.find((x) => x.id === p.contactId); if (c) { $('#seg').value = 'pick'; picked = new Map([[c.id, c]]); } }
   if (p.segment) $('#seg').value = p.segment;
   if (p.segment === 'unpaid') { const t = templates.find((x) => x.name === '미납 안내'); if (t) $('#tpl').value = t.id; applyTpl(); }
-  if (p.text) { $('#tpl').value = ''; $('#text').value = p.text; }
+  if (p.text) { $('#tpl').value = ''; $('#text').value = p.text; aiDraft = p.text; }
   preview();
 };
 load().then(() => window.onParams(Object.fromEntries(new URLSearchParams(location.search))));

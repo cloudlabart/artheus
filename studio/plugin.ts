@@ -17,7 +17,7 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import { spawn, spawnSync } from 'node:child_process';
 import { JobManager, type JobKind } from './jobs';
-import { createAdmin } from './admin';
+import { createAdmin, rememberAiDrafts, addStyleSample } from './admin';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +56,7 @@ You are in the COLUMN tab of "아터스 스튜디오". Columns are SEO/GEO artic
 - Never publish, never set status: published, never run git. Publishing is done only by the studio's 발행 button.
 - Never modify studio/ or public/column/ directly. Site React code (src/) is out of scope here unless the user explicitly asks.
 - After changing an article, regenerate its preview: \`${PY} tools/geo-seo/scripts/build_site.py --preview <slug>\` and the Naver file: \`${PY} tools/geo-seo/scripts/publish.py naver content/column/<slug>/article.md\`.
+- Write every Korean sentence in the voice of content/style/voice.md (배준우 문체 가이드). Read it before writing or rewriting.
 - Final reply in Korean, short: 무엇을 했는지, 검수 점수, 확인 필요.
 `.trim();
 
@@ -75,6 +76,7 @@ Rules:
 - Columns follow CLAUDE.md and .claude/skills/content-pipeline (status: draft only). Never publish, never set status: published, never run git.
 - After site edits, run \`npm run build\` once to verify. After column edits, run \`${PY} tools/geo-seo/scripts/build_site.py --preview <slug>\`.
 - You run headless: never ask questions; list open questions under "확인 필요".
+- All public copy (columns, site text, captions) follows content/style/voice.md (배준우 문체). Tell writing subagents to read it.
 - Final reply in Korean, short: 무엇을 누구에게 맡겼고 결과가 무엇인지, 확인 필요.
 `.trim();
 
@@ -432,7 +434,16 @@ export function artheusStudio(): Plugin {
 
           const title = String(body.title || prompt).replace(/\s+/g, ' ').slice(0, 60);
           const j = jm.start({ kind, title, lane, slug: slug || undefined, userText: String(body.label || prompt), prompt: full, args, model: body.model, snapshotId,
-            onExit: (job) => { if (job.kind !== 'page') server.ws.send({ type: 'custom', event: 'studio:job-done', data: { id: job.id } }); } });
+            onExit: (job) => {
+              if (job.kind !== 'page') server.ws.send({ type: 'custom', event: 'studio:job-done', data: { id: job.id } });
+              if (job.status !== 'done' || (job.kind !== 'column' && job.kind !== 'manager')) return;
+              // 문체 학습: AI가 손댄 칼럼은 "AI 버전"으로 보관(이후 사람이 직접 고친 것만 첨삭으로 잡힘), 수정 지시는 학습 자료로
+              const slugs = new Set<string>(job.slug ? [job.slug] : []);
+              for (const e of job.edited) { const mm2 = e.match(/^content\/column\/([a-z0-9-]+)\/article\.md$/); if (mm2) slugs.add(mm2[1]); }
+              try { rememberAiDrafts(root, [...slugs]); } catch {}
+              const isFollowUp = job.kind === 'manager' || (!!job.slug && !/^새 칼럼|^칼럼 주제 추천/.test(job.title));
+              if (isFollowUp) try { addStyleSample(root, { kind: 'instruction', source: job.kind === 'manager' ? '매니저 지시' : '칼럼 수정 지시', title: job.slug || '', after: String(body.label || prompt).slice(0, 1500) }); } catch {}
+            } });
           return json(res, 200, { id: j.id, lane });
         }
 
