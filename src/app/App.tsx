@@ -4,10 +4,10 @@
  * 원본(Figma Make)의 구조를 그대로 따릅니다.
  *  - HashRouter: 주소가 /#/login 처럼 동작해 어느 호스팅에서도 새로고침이 깨지지 않습니다.
  *  - 공개 페이지(비전·코치·프로그램 등)는 nav.ts의 go('vision') 호출로 화면만 바뀝니다.
- *  - 로그인·관리자·강사 콘솔·artheus ON 등은 아직 자리표시 화면입니다.
+ *  - 로그인·마이페이지·강사 콘솔·관리자는 src/app/lms (서버: server/lms). artheus ON은 아직 자리표시 화면입니다.
  */
 import { useState, useEffect, type ReactNode, startTransition } from 'react';
-import { HashRouter, Routes, Route, useNavigate } from 'react-router';
+import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router';
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { Header } from './components/Header';
@@ -17,6 +17,8 @@ import { CursorGlow } from './components/CursorGlow';
 import { PageKey, _registerNavHandler } from './nav';
 import { Home } from './pages/Home';
 import { Placeholder } from './pages/Placeholder';
+import { LoginPage } from './lms/LoginPage';
+import { AdminRoutes, CoachRoutes, MyRoutes } from './lms/Dashboards';
 
 // 로그인이 필요한 화면 → 주소 경로
 const PROTECTED: Partial<Record<PageKey, string>> = {
@@ -109,11 +111,11 @@ function AppRoutes() {
     <>
       <CursorGlow />
       <Routes>
-        <Route path="/login"    element={later('로그인', 'LOGIN')} />
-        <Route path="/signup"   element={later('회원가입', 'SIGN UP')} />
-        <Route path="/my/*"     element={later('마이페이지', 'MY PAGE')} />
-        <Route path="/admin/*"  element={later('관리자 대시보드', 'ADMIN')} />
-        <Route path="/coach/*"  element={later('강사 콘솔', 'COACH')} />
+        <Route path="/login"    element={<DL><LoginPage /></DL>} />
+        <Route path="/signup"   element={<Navigate to="/login" replace />} />
+        <Route path="/my/*"     element={<DL><MyRoutes /></DL>} />
+        <Route path="/admin/*"  element={<DL><AdminRoutes /></DL>} />
+        <Route path="/coach/*"  element={<DL><CoachRoutes /></DL>} />
         <Route path="/practice/*" element={later('artheus ON', 'PRACTICE STUDIO')} />
         <Route path="/*" element={
           <DL>

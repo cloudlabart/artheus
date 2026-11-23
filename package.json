@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "lms": "node --no-warnings server/lms/server.mjs",
+    "lms:admin": "node --no-warnings server/lms/cli.mjs"
   },
   "dependencies": {
     "lucide-react": "0.487.0",

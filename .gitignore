@@ -57,3 +57,6 @@ logs/
 
 # Search Console 원천 데이터 (공개 저장소에 올리지 않음)
 content/data/
+
+# LMS 서버 데이터(계정·수업·제출물) — 절대 커밋하지 않음
+server/data/

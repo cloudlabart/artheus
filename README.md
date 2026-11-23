@@ -153,3 +153,18 @@ claude
 - `studio/` 폴더는 고치지 않도록 지시되어 있습니다.
 - 스튜디오는 이 컴퓨터(localhost)에서 열 때만 동작합니다. 같은 와이파이의 다른 기기에서 접근하면 거부합니다.
 - 개발 서버 전용입니다. `npm run build`로 만드는 배포 파일에는 스튜디오가 들어가지 않습니다.
+
+## 로그인·수업관리(LMS) 서버
+
+외부 서비스 없이 학원이 직접 돌리는 서버입니다 (`server/lms/`, Node 22 이상, 설치할 패키지 없음).
+
+```bash
+npm run lms                                   # 서버 켜기 (http://localhost:8787)
+npm run lms:admin -- create-admin admin 배준우   # 첫 관리자 + 초대 링크
+npm run lms:admin -- invite <아이디>            # 비밀번호 잊은 사람 새 초대 링크
+npm run lms:admin -- backup                   # server/data/backup/ 에 복사
+```
+
+- 계정은 관리자 화면(/#/admin)에서 만들고, 나오는 초대 링크를 카톡으로 보내면 본인이 비밀번호를 정합니다. 회원가입은 없습니다.
+- 데이터: `server/data/lms.db`, 제출 파일 `server/data/files/` (gitignore). 원생 정보이므로 커밋 금지, 정기 백업.
+- 실제 사이트에서 쓰려면 서버가 24시간 켜져 있어야 하고 `api.c-art.co.kr`이 그 서버를 가리켜야 합니다(HTTPS). 환경변수: `PORT`, `LMS_DATA`, `LMS_ORIGINS`(허용할 사이트 주소, 쉼표), `LMS_SITE`(초대 링크에 쓸 주소). 사이트 쪽은 `VITE_LMS_API`로 서버 주소를 바꿀 수 있습니다.
