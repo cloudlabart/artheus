@@ -7,12 +7,12 @@
 <link rel="stylesheet" href="/__studio/kit/kit.css">
 <style>
 html, body { height: 100%; overflow: hidden; }
-.shell { position: fixed; inset: 0; display: grid; grid-template-columns: 76px minmax(0, 1fr); }
+.shell { position: fixed; inset: 0; display: grid; grid-template-columns: 92px minmax(0, 1fr); }
 .main { overflow: hidden; }
 .rail { background: var(--accent); color: #fff; display: flex; flex-direction: column; align-items: stretch; padding: 10px 6px; gap: 2px; overflow-y: auto; }
 .logo { font-weight: 900; letter-spacing: .12em; font-size: 11px; text-align: center; padding: 6px 0 12px; opacity: .95; }
 .rail .grp { font-size: 9.5px; letter-spacing: .08em; opacity: .55; text-align: center; margin: 10px 0 2px; }
-.rail button { border: 0; background: transparent; color: #fff; border-radius: 12px; padding: 7px 2px 6px; cursor: pointer; display: grid; justify-items: center; gap: 2px; font-size: 10.5px; opacity: .8; }
+.rail button { border: 0; background: transparent; color: #fff; border-radius: 12px; padding: 7px 2px 6px; cursor: pointer; display: grid; justify-items: center; gap: 2px; font-size: 11.5px; opacity: .8; }
 .rail button span { font-size: 18px; line-height: 1; }
 .rail button:hover { background: rgb(255 255 255 / .1); opacity: 1; }
 .rail button.on { background: rgb(255 255 255 / .18); opacity: 1; }
@@ -38,7 +38,18 @@ html, body { height: 100%; overflow: hidden; }
 .app { border: 1px solid var(--line); background: var(--panel); border-radius: 16px; padding: 16px; cursor: pointer; display: grid; gap: 6px; text-align: left; }
 .app:hover { border-color: var(--accent-2); }
 .app b { font-size: 15px; } .app span { font-size: 24px; } .app small { color: var(--muted); font-size: 12px; line-height: 1.5; }
-@media (max-width: 700px) { .shell { grid-template-columns: 58px minmax(0, 1fr); } .rail button { font-size: 9.5px; } .tab { min-width: 90px; } }
+.chip.pub { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+.chip.pub b { background: #fff; color: var(--accent); border-radius: 999px; padding: 0 6px; margin-left: 4px; font-size: 11px; }
+dialog.pubd { border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(560px, 94vw); background: var(--panel); color: var(--fg); }
+dialog.pubd::backdrop { background: rgb(0 0 0 / .35); }
+.pubd .in { padding: 20px; display: grid; gap: 12px; } .pubd h2 { margin: 0; font-size: 17px; }
+.pubd ul { margin: 0; padding: 10px 12px; list-style: none; max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; font: 12px/1.7 ui-monospace, Menlo, monospace; background: var(--bg); }
+.pubd .k { display: inline-block; width: 50px; white-space: nowrap; color: var(--muted); } .pubd .muted { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.pubd input { width: 100%; box-sizing: border-box; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg); color: var(--fg); font-size: 14px; }
+.pubd .row { display: flex; gap: 8px; justify-content: flex-end; } .pubd .row button { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel); color: var(--fg); cursor: pointer; font-size: 13px; }
+.pubd .row button.go { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; } .pubd .row button:disabled { opacity: .45; cursor: default; }
+.pubd .err { color: #B23A32; white-space: pre-wrap; font-size: 12.5px; } .pubd .ok { color: #2F7A4F; font-size: 13px; line-height: 1.7; }
+@media (max-width: 700px) { .shell { grid-template-columns: 66px minmax(0, 1fr); } .rail button { font-size: 9.5px; } .tab { min-width: 90px; } }
 </style>
 </head>
 <body>
@@ -51,8 +62,18 @@ html, body { height: 100%; overflow: hidden; }
       <div class="tools">
         <span class="chip" id="jobsChip" title="진행 중인 AI 작업">AI 작업 0</span>
         <button class="chip" id="popout" title="이 탭을 새 창으로">↗ 새 창</button>
+        <button class="chip pub" id="pubBtn" title="바뀐 사이트 내용을 GitHub에 올려 www에 반영">⬆ 사이트 발행<b id="pubN" hidden></b></button>
       </div>
     </div>
+    <dialog class="pubd" id="pubDlg"><div class="in">
+      <h2>사이트 발행</h2>
+      <div class="muted">아래 파일을 GitHub에 올려요. 빌드가 통과해야 올라가고, 2–3분 뒤 사이트에 반영돼요. 원생·상담 데이터와 연동 키는 올라가지 않아요.</div>
+      <ul id="pubList"></ul>
+      <div class="muted" id="pubSkip" hidden></div>
+      <input id="pubMsg" placeholder="무엇을 바꿨는지 한 줄 (비우면 자동)" maxlength="120">
+      <div id="pubOut"></div>
+      <div class="row"><button id="pubClose">닫기</button><button class="go" id="pubGo">발행하기</button></div>
+    </div></dialog>
     <div class="stage" id="stage">
       <div class="launcher" id="launcher" hidden>
         <div class="page"><div class="head"><h1>앱</h1><span class="sub">눌러서 탭으로 열고, ↗ 새 창으로 떼어 낼 수 있어요.</span></div><div class="apps" id="apps"></div></div>
@@ -122,6 +143,31 @@ function closeTab(app) {
   if (active === app) active = tabs[Math.max(0, i - 1)]?.app || null;
   save(); render();
 }
+/* ── 사이트 발행 ── */
+const LABEL = { M: '수정', A: '추가', D: '삭제', '??': '새 파일', R: '이름' };
+async function sapi(url, body) {
+  const r = await fetch(url, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw Object.assign(new Error(j.error || r.statusText), { problems: j.problems }); return j;
+}
+async function pubCount() { try { const s = await sapi('/__studio/api/site/status'); const n = s.files.length + (s.ahead ? 1 : 0); $('#pubN').hidden = !n; $('#pubN').textContent = s.files.length || '↑'; return s; } catch { return null; } }
+$('#pubBtn').onclick = async () => {
+  $('#pubOut').innerHTML = ''; $('#pubGo').disabled = true; $('#pubList').innerHTML = '<li>확인 중…</li>'; $('#pubDlg').showModal();
+  try {
+    const s = await sapi('/__studio/api/site/status');
+    $('#pubList').innerHTML = s.files.map((f) => `<li><span class="k">${LABEL[f.code] || f.code}</span>${esc(f.path)}</li>`).join('') || (s.ahead ? `<li>이미 커밋된 변경 ${s.ahead}개가 아직 안 올라갔어요.</li>` : '<li>올릴 변경이 없어요.</li>');
+    $('#pubSkip').hidden = !s.skipped.length; $('#pubSkip').textContent = s.skipped.length ? `올리지 않는 파일 ${s.skipped.length}개: ${s.skipped.slice(0, 5).map((f) => f.path).join(', ')}${s.skipped.length > 5 ? ' …' : ''}` : '';
+    if (s.running) $('#pubOut').innerHTML = `<div class="err">AI 작업 ${s.running}개가 진행 중이에요. 끝난 뒤에 발행하세요.</div>`;
+    $('#pubGo').disabled = !!s.running || (!s.files.length && !s.ahead);
+  } catch (e) { $('#pubList').innerHTML = ''; $('#pubOut').innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+};
+$('#pubClose').onclick = () => $('#pubDlg').close();
+$('#pubGo').onclick = async () => {
+  $('#pubGo').disabled = true; $('#pubGo').textContent = '빌드 확인하고 올리는 중…'; $('#pubOut').innerHTML = '';
+  try { const r = await sapi('/__studio/api/site/publish', { message: $('#pubMsg').value }); $('#pubOut').innerHTML = `<div class="ok">${r.steps.map(esc).join('<br>')}</div>`; $('#pubMsg').value = ''; $('#pubList').innerHTML = ''; }
+  catch (e) { $('#pubOut').innerHTML = `<div class="err">${esc(e.message)}${e.problems ? '\n' + e.problems.map(esc).join('\n') : ''}</div>`; $('#pubGo').disabled = false; }
+  $('#pubGo').textContent = '발행하기'; pubCount();
+};
+pubCount(); setInterval(pubCount, 20000);
 $('#plus').onclick = () => { active = null; save(); render(); };
 $('#popout').onclick = () => { if (!active) return; const fr = frames.get(active); window.open(fr?.contentWindow?.location.href || urlOf(active), '_blank', 'width=1280,height=860'); };
 $('#apps').innerHTML = APPS.map((a) => `<button class="app" data-app="${a.id}"><span>${a.icon}</span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></button>`).join('');

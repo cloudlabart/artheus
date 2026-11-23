@@ -34,12 +34,14 @@ The user sees a live preview that hot-reloads as you edit files, so:
 - Never modify anything under studio/.
 - Keep the existing design language (ivory #F3F0EA, deep blue #153956, ink #132B3F, keep-ko class for Korean line breaks) unless asked to change it.
 - When the user selected an element, its source location is given; change that place first.
+- For UI/layout/visual work, use the frontend-design skill, but CLAUDE.md design rules (colors, keep-ko, rounded-2xl, mobile 390px) always win.
+- Follow security-guidance warnings: no secrets in code, no dangerouslySetInnerHTML with user input, no personal data in src/ or public/.
 - Reply in Korean, briefly: what you changed and in which files. No long explanations.
 `.trim();
 
 const NESTED_MSG = '스튜디오가 Claude Code 안에서 실행되고 있어 Claude를 부를 수 없습니다.\n\n해결: Claude Code 창에서 Ctrl+C로 개발 서버를 끄고, 새 터미널 창을 열어 프로젝트 폴더에서 npm run dev 를 다시 실행한 뒤 이 화면을 새로고침하세요.';
 
-const ALLOWED_TOOLS = ['Read', 'Edit', 'MultiEdit', 'Write', 'Glob', 'Grep'];
+const ALLOWED_TOOLS = ['Read', 'Edit', 'MultiEdit', 'Write', 'Glob', 'Grep', 'Skill'];
 
 /* 칼럼 작업용: 웹 조사 + 칼럼 스크립트만 추가로 허용 (git·배포는 버튼으로만) */
 const PY = process.platform === 'win32' ? 'python' : 'python3';
@@ -79,6 +81,19 @@ Rules:
 - All public copy (columns, site text, captions) follows content/style/voice.md (배준우 문체). Tell writing subagents to read it.
 - Final reply in Korean, short: 무엇을 누구에게 맡겼고 결과가 무엇인지, 확인 필요.
 `.trim();
+
+/* ── 사이트 발행 버튼: 바뀐 파일을 검사 → 빌드 확인 → 커밋 → push ── */
+// 공개 저장소에 올려도 되는 경로만 (운영 데이터 .studio/, server/data/, content/data/ 는 .gitignore 로도 막혀 있음)
+const PUBLISH_PATHS = ['src', 'public', 'content/column', 'content/style', 'content/geo-seo.config.json', 'content/plan.md', 'index.html',
+  'studio', 'tools', '.claude', '.github', 'server/lms', 'package.json', 'package-lock.json', 'vite.config.ts', 'tsconfig.json', 'postcss.config.mjs', 'CLAUDE.md', 'README.md'];
+const BLOCK_PATHS = /^(\.studio|server\/data|content\/data|\.env)|(^|\/)\.env|\.(csv|xlsx|sqlite|db|pem|key)$/i;
+const SECRET_RE = /(sk-ant-[A-Za-z0-9_-]{10,}|EAA[A-Za-z0-9]{40,}|AIza[0-9A-Za-z_-]{30,}|ghp_[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?secret|apiKey|access[_-]?token)\s*[:=]\s*['"][A-Za-z0-9_\-]{24,}['"])/;
+function siteChanges(root: string) {
+  const st = spawnSync('git', ['-c', 'core.quotepath=false', 'status', '--porcelain', '-uall'], { cwd: root, encoding: 'utf8' }).stdout || '';
+  const all = st.split('\n').filter(Boolean).map((l) => ({ code: l.slice(0, 2).trim(), path: l.slice(3).replace(/^"|"$/g, '').split(' -> ').pop()! }));
+  const inScope = (f: string) => PUBLISH_PATHS.some((p) => f === p || f.startsWith(p + '/'));
+  return { files: all.filter((f) => inScope(f.path) && !BLOCK_PATHS.test(f.path)), skipped: all.filter((f) => !inScope(f.path) || BLOCK_PATHS.test(f.path)) };
+}
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -328,6 +343,49 @@ export function artheusStudio(): Plugin {
           if (!runGit(root, ['remote']).out) return json(res, 400, { error: 'GitHub 원격 저장소가 연결되어 있지 않습니다.' });
           const r = runGit(root, ['pull', '--rebase', '--autostash']);
           return json(res, r.ok ? 200 : 500, r.ok ? { ok: true, out: r.out } : { error: r.out.slice(-500) });
+        }
+
+        if (url === '/__studio/api/site/status') {
+          if (!runGit(root, ['rev-parse', '--is-inside-work-tree']).ok) return json(res, 400, { error: 'git 저장소가 아닙니다.' });
+          const ahead = runGit(root, ['rev-list', '--count', '@{u}..HEAD']);
+          return json(res, 200, { ...siteChanges(root), ahead: ahead.ok ? +ahead.out || 0 : 0, running: jm.running().length });
+        }
+        if (url === '/__studio/api/site/publish' && req.method === 'POST') {
+          const { message } = await readBody(req);
+          if (jm.running().length) return json(res, 409, { error: 'AI 작업이 진행 중이에요. 끝난 뒤에 발행하세요.' });
+          if (!runGit(root, ['remote']).out) return json(res, 400, { error: 'GitHub 원격 저장소가 연결되어 있지 않습니다.' });
+          const { files } = siteChanges(root);
+          const ahead = +runGit(root, ['rev-list', '--count', '@{u}..HEAD']).out || 0;
+          if (!files.length && !ahead) return json(res, 400, { error: '올릴 변경이 없어요.' });
+          const steps: string[] = [];
+          // 1) 비밀 키·큰 파일 검사
+          const problems: string[] = [];
+          for (const f of files) {
+            const abs = path.join(root, f.path);
+            if (!fs.existsSync(abs) || fs.statSync(abs).isDirectory()) continue;
+            if (fs.statSync(abs).size > 20 * 1024 * 1024) problems.push(`${f.path}: 20MB가 넘어요.`);
+            else if (!/\.(png|jpe?g|gif|webp|ico|mp4|woff2?|ttf|pdf)$/i.test(f.path) && SECRET_RE.test(fs.readFileSync(abs, 'utf8'))) problems.push(`${f.path}: 비밀 키처럼 보이는 글자가 있어요. 키는 설정 앱(.studio)에만 두세요.`);
+          }
+          if (problems.length) return json(res, 422, { error: '발행을 멈췄어요.', problems });
+          // 2) 빌드 확인 (배포 폴더 dist/는 건드리지 않음)
+          const b = spawnSync('npx', ['vite', 'build', '--outDir', '.studio/build-check', '--emptyOutDir', '--logLevel', 'error'], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
+          if (b.status !== 0) return json(res, 422, { error: '빌드가 실패해서 올리지 않았어요.', problems: [((b.stdout || '') + (b.stderr || '')).slice(-800)] });
+          steps.push('빌드 확인 통과');
+          // 3) 커밋 → 받기 → 올리기
+          if (files.length) {
+            const add = runGit(root, ['add', '-A', '--', ...files.map((f) => f.path)]);
+            if (!add.ok) return json(res, 500, { error: 'git add 실패', problems: [add.out] });
+            const msg = String(message || '').trim().slice(0, 120) || `사이트 업데이트 (${files.length}개 파일)`;
+            const c = runGit(root, ['commit', '-m', msg]);
+            if (!c.ok && !/nothing to commit/.test(c.out)) return json(res, 500, { error: '커밋 실패', problems: [c.out.slice(-400)] });
+            steps.push(`커밋: ${msg}`);
+          }
+          const pull = runGit(root, ['pull', '--rebase', '--autostash']);
+          if (!pull.ok) return json(res, 500, { error: 'GitHub의 최신 내용과 합치지 못했어요. 커밋은 이 Mac에 남아 있어요.', problems: [pull.out.slice(-500)] });
+          const p = runGit(root, ['push']);
+          if (!p.ok) return json(res, 500, { error: 'push 실패. 커밋은 이 Mac에 남아 있어요.', problems: [p.out.slice(-500)] });
+          steps.push('GitHub에 올렸어요. 2–3분 뒤 사이트에 반영돼요(GitHub › Actions › 사이트 배포).');
+          return json(res, 200, { ok: true, steps });
         }
 
         if (url === '/__studio/api/columns/publish' && req.method === 'POST') {
