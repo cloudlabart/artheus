@@ -7,7 +7,9 @@
   <div class="grid g2">
     <div class="card"><h2>백업</h2>
       <div class="small">CRM·상담·예약·수강료·메시지 기록은 <code>.studio/data/</code>에 있고, 하루 한 번 <code>.studio/backup/날짜/</code>에 자동 복사됩니다(60일 보관). 컴퓨터 고장에 대비해 가끔 파일로 내려받아 안전한 곳에 두세요.</div>
-      <div class="row"><a class="btn" href="/__studio/api/backup" download>백업 파일 받기</a><label class="btn danger">백업에서 복원<input type="file" id="restore" accept=".json" hidden></label></div></div>
+      <div class="row"><a class="btn" href="/__studio/api/backup" download>백업 파일 받기</a><label class="btn danger">백업에서 복원<input type="file" id="restore" accept=".json" hidden></label></div>
+      <div class="small muted">기존 c-art.co.kr 사이트의 상담 신청을 CRM·상담으로 옮길 때는 아래 버튼으로 <b>합쳐서</b> 가져오세요(지금 데이터는 지우지 않음).</div>
+      <div class="row"><label class="btn">기존 사이트 데이터 가져오기<input type="file" id="legacy" accept=".json" hidden></label></div></div>
     <div class="card"><h2>개인정보 체크</h2>
       <div class="small" style="line-height:1.8">
         · 수강생 다수가 미성년자입니다. <b>만 14세 미만</b>은 개인정보 수집에 보호자(법정대리인) 동의가 필요해요. CRM의 동의 칸을 채워 두세요.<br>
@@ -49,6 +51,18 @@ $('#restore').onchange = async (e) => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   if (!confirm('지금 데이터를 백업 파일 내용으로 바꿉니다. 계속할까요? (현재 데이터는 오늘 자동 백업에 남아 있어요)')) return;
   try { const r = await api('/__studio/api/backup', { method: 'POST', body: JSON.parse(await f.text()) }); toast(`복원했습니다 (${r.restored}종류)`); } catch (err) { toast(err.message); }
+};
+$('#legacy').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text());
+    if (!Array.isArray(j.contacts) || !Array.isArray(j.consults)) return toast('기존 사이트 데이터 파일이 아닙니다');
+    const r1 = await K.db('contacts').bulk(j.contacts, 'phone');
+    const contacts = await K.db('contacts').list();
+    const consults = j.consults.map((c) => { const ct = contacts.find((x) => (c.phone && x.phone === c.phone) || x.name === c.name); return { ...c, contactId: ct?.id || '' }; });
+    const r2 = await K.db('consults').bulk(consults, 'legacyId');
+    toast(`연락처 ${r1.added}명 추가·${r1.updated}명 갱신 · 상담 ${r2.added}건 추가`);
+  } catch (err) { toast(err.message); }
 };
 load();
 </script></body></html>

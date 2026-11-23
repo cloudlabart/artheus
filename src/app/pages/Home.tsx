@@ -6,7 +6,6 @@ import { go } from '../nav';
 import { useData } from '../contexts/DataContext';
 import { InstagramConsultButton } from '../components/InstagramConsultButton';
 import { INSTAGRAM_HANDLE } from '../data/siteLinks';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
 import kyungheeImg from '../../assets/schools/kyunghee.png';
 import sungkyunkwanImg from '../../assets/schools/skku.png';
 import kookminImg from '../../assets/schools/kookmin.png';
@@ -19,7 +18,6 @@ import seoulArtsImg from '../../assets/schools/seoularts.png';
 import sungshinImg from '../../assets/schools/sungshin.png';
 import seokyeongImg from '../../assets/schools/sku.svg';
 
-const SERVER = `https://${projectId}.supabase.co/functions/v1/make-server-d46327e9`;
 
 const RESULT_SCHOOLS: { name: string; count: number; logo?: string }[] = [
   { name: '국민대', count: 6, logo: kookminImg },
@@ -113,22 +111,7 @@ export function Home() {
   }, []);
 
   useEffect(() => {
-    if (initialPhotoUrl) {
-      setApprovedPhoto(initialPhotoUrl);
-      return;
-    }
-    let cancelled = false;
-    fetch(`${SERVER}/admin/coach-photo/coach-c1`, {
-      headers: { Authorization: `Bearer ${publicAnonKey}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (!cancelled && json?.url) setApprovedPhoto(json.url);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    setApprovedPhoto(initialPhotoUrl || '/coaches/coach-c1.jpg');
   }, [initialPhotoUrl]);
 
   return (

@@ -1,5 +1,6 @@
 /**
- * useSiteContent — 관리자 패널 "사이트 콘텐츠" 편집값을 KV에서 읽어오는 훅
+ * useSiteContent — 사이트 문구(히어로·비전·연락처)
+ * 기존 사이트 관리자에서 저장했던 값을 src/content/site.json 으로 옮겨 왔습니다(서버 연결 없음).
  * AdminPanel의 SiteContentSection에서 저장한 값을 프론트엔드에 반영합니다.
  *
  * 저장 키 구조: KV `site_content:main` → {
@@ -8,10 +9,7 @@
  *   contact_email, contact_phone, contact_address
  * }
  */
-import { useState, useEffect } from 'react';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
-
-const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-d46327e9`;
+import content from '../../content/site.json';
 
 // 관리자가 입력하지 않았을 때 사용하는 기본값
 export const SITE_DEFAULTS = {
@@ -55,23 +53,8 @@ export const SITE_DEFAULTS = {
 
 export type SiteContent = typeof SITE_DEFAULTS;
 
+const merged = { ...SITE_DEFAULTS, ...Object.fromEntries(Object.entries(content.site).map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])) } as SiteContent;
+
 export function useSiteContent() {
-  const [content, setContent] = useState<SiteContent>(SITE_DEFAULTS);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`${BASE}/admin/site-content`, {
-      headers: { Authorization: `Bearer ${publicAnonKey}` },
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data && typeof data === 'object' && !data.error) {
-          setContent({ ...SITE_DEFAULTS, ...data });
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  return { content, loading };
+  return { content: merged, loading: false };
 }

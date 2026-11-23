@@ -7,7 +7,7 @@
 - `src/app/pages/` — 페이지. `Home.tsx`만 원본, 나머지는 `Placeholder`.
 - `src/app/components/` — Header, Footer, QuickMenu, InstagramConsultButton 등.
 - `src/styles/` — `theme.css`(토큰), `public-ui.css`(브랜드 색), `fonts.css`.
-- `utils/supabase/info.tsx` — 기존 Supabase 연결 정보(공개 anon 키).
+- `src/content/site.json` — 코치·프로그램·LAB·공지·웹진·사이트 문구(기존 사이트에서 옮긴 공개 내용). 서버 없이 사이트에 포함된다. 코치 사진은 `public/coaches/`. Supabase 연결은 없다.
 - `studio/` — 아터스 스튜디오(개발 서버 전용). `shell.html` 브라우저형 셸, `apps/*.html` 운영 앱(CRM·상담·예약·수강료·카카오·인스타·유튜브·웹진·광고·설정), `admin.ts` 데이터·연동 API, `ui.html` 작업실(페이지·칼럼·매니저), `jobs.ts` 동시 작업. 사이트 작업 중에는 고치지 않는다.
 - `content/column/<slug>/article.md` — 칼럼 원고(frontmatter `status: draft|published`). `content/geo-seo.config.json` — 브랜드·저자·청중·칼럼 디자인 설정.
 - `public/column/`, `public/sitemap.xml`, `public/rss.xml` — `python3 tools/geo-seo/scripts/build_site.py`가 만드는 칼럼 발행본. 직접 고치지 않는다.

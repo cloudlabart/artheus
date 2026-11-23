@@ -12,7 +12,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.join(root, 'src'),
-      '/utils': path.join(root, 'utils'),
     },
   },
   server: { port: 5173 },

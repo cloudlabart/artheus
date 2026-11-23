@@ -1,24 +1,46 @@
 /**
- * 사이트 데이터 (뼈대 버전)
- * 원본은 Supabase 서버에서 코치·프로그램 등을 불러왔습니다.
- * 지금은 빈 목록을 돌려주며, 홈 화면은 자체 기본값(배준우 경력 등)으로 표시됩니다.
+ * 사이트 데이터 — 코치·프로그램·공지·LAB·웹진
+ * 기존 Figma Make 사이트(Supabase)에서 옮긴 공개 내용을 src/content/site.json 에서 읽습니다.
+ * 서버 연결 없이 사이트에 포함되어 배포됩니다. 내용을 바꾸려면 site.json 을 고치세요.
  */
 import { createContext, useContext, type ReactNode } from 'react';
+import content from '../../content/site.json';
 
 export type Coach = {
   id: string;
   nameKo?: string;
+  nameEn?: string;
+  description?: string;
+  specialty?: string;
+  bio?: string;
+  philosophy?: string;
   career?: string[] | string;
   photoUrl?: string;
   [key: string]: unknown;
 };
+export type Program = { id: string; title: string; tag: string; category: string; description: string; content: string };
+export type LabItem = { id: string; title: string; status: string; category: string; description: string; content: string };
+export type Notice = { id: string; title: string; content: string; is_pinned: boolean; created_at: string };
+export type ZineArticle = { id: string; title: string; author: string; category: string; content: string; created_at: string };
 
-type DataValue = { coaches: Coach[] };
+const coaches: Coach[] = content.coaches.map((c) => ({
+  id: c.id, nameKo: c.name_ko, nameEn: c.title, description: c.description, specialty: c.specialty,
+  bio: c.bio, philosophy: c.philosophy, career: c.career, photoUrl: c.photo,
+}));
 
-const DataContext = createContext<DataValue>({ coaches: [] });
+type DataValue = { coaches: Coach[]; programs: Program[]; lab: LabItem[]; notices: Notice[]; zine: ZineArticle[] };
+const value: DataValue = {
+  coaches,
+  programs: content.programs as Program[],
+  lab: content.lab as LabItem[],
+  notices: content.notices as Notice[],
+  zine: content.zine as ZineArticle[],
+};
+
+const DataContext = createContext<DataValue>(value);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  return <DataContext.Provider value={{ coaches: [] }}>{children}</DataContext.Provider>;
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
 export const useData = () => useContext(DataContext);
