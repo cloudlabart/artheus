@@ -26,7 +26,7 @@ export function Logo({ className = '', variant = 'full', size = 'md' }: LogoProp
     return (
       <div className={`flex items-center gap-2.5 ${className}`}>
         <img
-          src="/uploads/20261123-213903-image-9ydr.png"
+          src="/uploads/20261124-093657-image-baen.png"
           alt="ARTHEUS 심볼"
           className={`${imgSize} w-auto`}
           draggable={false}

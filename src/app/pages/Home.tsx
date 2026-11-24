@@ -107,46 +107,61 @@ export function Home() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="mb-8 sm:mb-10"
+            className="mb-10 sm:mb-14"
           >
             <img
-              src="/uploads/20261123-213903-image-9ydr.png"
+              src="/uploads/20261124-093657-image-baen.png"
               alt="ARTHEUS 심볼"
-              className="w-20 h-20 sm:w-28 sm:h-28 object-contain drop-shadow-[0_4px_24px_rgba(169,197,217,0.15)]"
+              className="w-16 h-16 sm:w-24 sm:h-24 object-contain drop-shadow-[0_4px_24px_rgba(169,197,217,0.15)]"
               draggable={false}
             />
           </motion.div>
 
-          {/* 대형 타이틀 */}
+          {/* 감성 카피 — 첫 줄 */}
+          <motion.p
+            className="keep-ko text-center text-[clamp(0.9rem,2.8vw,1.35rem)] leading-[1.9] text-[#A9C5D9]/70 font-medium tracking-wide"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.9 }}
+          >
+            말로 할 수 없는 마음,
+            <br />
+            그 마음을 담은 눈빛.
+          </motion.p>
+
+          {/* 대형 브랜드 타이틀 */}
           <motion.h1
             id="hero-heading"
-            className="text-center"
+            className="text-center mt-6 sm:mt-8"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ delay: 0.45, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           >
             <span className="block text-[clamp(2.8rem,11vw,9rem)] font-black leading-[0.88] tracking-[-0.04em] text-[#F3F0EA]">
               artheus
             </span>
           </motion.h1>
 
-          {/* 태그라인 */}
-          <motion.p
-            className="keep-ko mt-6 sm:mt-8 text-center text-base sm:text-xl text-[#A9C5D9]/80 font-medium tracking-wide leading-relaxed"
+          {/* 연기 철학 카피 */}
+          <motion.div
+            className="mt-8 sm:mt-10 text-center space-y-1"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
+            transition={{ delay: 0.75, duration: 0.8 }}
           >
-            본질을 다루는 액팅 스튜디오
-          </motion.p>
+            <p className="keep-ko text-sm sm:text-base text-[#8CADC8]/60 leading-[1.8] tracking-wide">
+              연결되는 연기, 소통하는 연기, 함께하는 연기.
+            </p>
+          </motion.div>
 
+          {/* YOU DESERVE IT */}
           <motion.p
-            className="keep-ko mt-2.5 text-center text-sm text-[#8CADC8]/50"
+            className="mt-6 sm:mt-8 text-center text-[clamp(0.65rem,1.6vw,0.8rem)] font-bold tracking-[0.35em] uppercase text-[#A9C5D9]/35"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.85, duration: 0.7 }}
+            transition={{ delay: 1, duration: 0.8 }}
           >
-            홍대 · 연기 전공 · 연극영화과 입시
+            YOU DESERVE IT.
           </motion.p>
         </div>
 
