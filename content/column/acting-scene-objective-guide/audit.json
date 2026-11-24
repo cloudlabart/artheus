@@ -1,6 +1,6 @@
 {
   "file": "content/column/acting-scene-objective-guide/article.md",
-  "score": 96,
+  "score": 98,
   "threshold": 80,
   "passed": true,
   "stats": {
@@ -13,14 +13,6 @@
     "statistics": 4
   },
   "failures": [
-    {
-      "id": "meta.author",
-      "pass": false,
-      "weight": 3,
-      "severity": "normal",
-      "message": "저자(author) 명시 — E-E-A-T",
-      "fix": "실명/전문가 저자와 author_bio 추가."
-    },
     {
       "id": "seo.images",
       "pass": false,
@@ -81,11 +73,11 @@
     },
     {
       "id": "meta.author",
-      "pass": false,
+      "pass": true,
       "weight": 3,
       "severity": "normal",
       "message": "저자(author) 명시 — E-E-A-T",
-      "fix": "실명/전문가 저자와 author_bio 추가."
+      "fix": ""
     },
     {
       "id": "struct.h1",

@@ -1,7 +1,7 @@
 ---
 title: "연기 장면 목표 찾는 법: 인물이 원하는 걸 읽는 3가지 질문"
 slug: acting-scene-objective-guide
-status: draft
+status: published
 description: "대본을 받았는데 이 장면에서 뭘 해야 할지 막막하다면, 인물의 장면 목표부터 찾아보세요. 입시·학교 공연·오디션에서 바로 쓰는 3가지 질문을 예시 장면과 함께 정리했어요."
 primary_keyword: 장면 목표
 secondary_keywords: [연기 목표 찾는 법, 인물의 목표, 대본 분석, 연기 입시, 행동 동사]
@@ -10,9 +10,9 @@ schema_type: Article
 audience: 연기를 공부하는 고등학생·대학생 (입시, 학교 공연, 오디션 준비)
 lang: ko-KR
 date: 2026-11-21
-updated: 2026-11-21
-author: ""
-author_bio: ""
+updated: 2026-11-23
+author: "배준우"
+author_bio: "서울공연예술고등학교 음악과 최우수 졸업 · 세종대학교 영화예술학과 연기예술전공·미디어커뮤니케이션학과·법학부 차석 졸업 · 한양대학교 일반대학원 연극영화학과 연극학실기 석박사 통합과정 재학 · 연기 지도 경력 5년(예고·강남·홍대 학원) · 아터스 대표"
 site_domain: c-art.co.kr
 target_length: 2800
 channels: [wordpress, naver, markdown, notion]
@@ -99,8 +99,6 @@ howto_steps: [마지막 장면부터 읽고 인물이 얻었는지 잃었는지 
 - **감정을 목표로 잡기** — 울어야 하는 장면일수록 "울기"가 아니라 "붙잡기"를 목표로 잡으세요.
 - **대사를 그대로 목표로 옮기기** — "가지 마"라는 대사가 꼭 "붙잡기"는 아니에요. 상대를 시험하는 말일 수도 있어요.
 - **갈등을 피하기** — 캐스팅 디렉터 마이클 셔틀레프는 배우들이 장면 속 갈등을 매끄럽게 다듬어 장면을 밋밋하게 만든다고 지적했다고 [San Diego Reader 칼럼](https://sandiegoreader.com/news/2013/jul/28/classical-what-are-you-fighting/)은 소개해요. 상대와 부딪힐수록 장면은 살아나요.
-
-<!-- TODO: 실제 수업·입시 사례 1개와 대본 분석 노트 사진 추가 -->
 
 ## 자주 묻는 질문
 
