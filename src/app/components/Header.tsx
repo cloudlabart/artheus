@@ -90,13 +90,13 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass-header">
+    <header className="fixed top-0 left-0 right-0 z-50 glass-header-court">
       <div className="max-w-[1470px] mx-auto px-4 sm:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
 
-          {/* Logo */}
+          {/* Logo — 심볼 + 워드마크 */}
           <button onClick={() => { go('home'); navigate('/'); window.scrollTo(0, 0); }} className="hover:opacity-80 transition-opacity">
-            <Logo size="md" />
+            <Logo variant="symbol" size="md" />
           </button>
 
           {/* Desktop Navigation */}
@@ -108,9 +108,9 @@ export function Header() {
                 return (
                   <button key={item.to}
                     onClick={() => go(pageKey as any)}
-                    className={"text-sm font-medium transition-colors relative pb-0.5 " + (isActive ? 'text-[#2D5E88]' : 'text-[#132B3F] hover:text-[#2D5E88]')}>
+                    className={"text-sm font-medium transition-colors relative pb-0.5 " + (isActive ? 'text-[#A9C5D9]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
                     {item.label}
-                    {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2D5E88] rounded-full" />}
+                    {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#A9C5D9] rounded-full" />}
                   </button>
                 );
               }
@@ -119,14 +119,14 @@ export function Header() {
                 return (
                   <Link key={item.to} to={item.to}
                     className="text-sm font-black italic transition-colors hover:opacity-80"
-                    style={{ fontFamily: "'Syne', 'DM Sans', sans-serif", color: '#153956', letterSpacing: '-0.02em' }}>
+                    style={{ fontFamily: "'Syne', 'DM Sans', sans-serif", color: '#F3F0EA', letterSpacing: '-0.02em' }}>
                     artheus ON
                   </Link>
                 );
               }
               return (
                 <Link key={item.to} to={item.to}
-                  className={"text-sm font-medium transition-colors " + (item.highlight ? 'text-[#2D5E88] hover:text-[#153956]' : 'text-[#132B3F] hover:text-[#2D5E88]')}>
+                  className={"text-sm font-medium transition-colors " + (item.highlight ? 'text-[#A9C5D9] hover:text-[#F3F0EA]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
                   {item.label}
                 </Link>
               );
@@ -140,17 +140,17 @@ export function Header() {
                 {/* 마이페이지 버튼 */}
                 <button
                   onClick={() => setUserMenuOpen(v => !v)}
-                  className="flex items-center gap-2.5 px-3 py-2 bg-white border border-[#A9C5D9] rounded-full hover:border-[#2D5E88] transition-all group"
+                  className="flex items-center gap-2.5 px-3 py-2 bg-[#F3F0EA]/10 border border-[#F3F0EA]/20 rounded-full hover:border-[#F3F0EA]/40 transition-all group"
                 >
                   {/* 아바타 */}
                   <div className="w-8 h-8 rounded-full bg-[#153956] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     {(user.realName || user.username || '?')[0].toUpperCase()}
                   </div>
                   <div className="flex flex-col items-start leading-none">
-                    <span className="text-sm font-bold text-[#132B3F]">{user.realName || user.username}</span>
-                    <span className={`text-[10px] font-medium mt-0.5 ${roleInfo?.color}`}>{roleInfo?.label}</span>
+                    <span className="text-sm font-bold text-[#F3F0EA]">{user.realName || user.username}</span>
+                    <span className="text-[10px] font-medium mt-0.5 text-[#A9C5D9]">{roleInfo?.label}</span>
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-[#AAAAAA] transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 text-[#A9C5D9] transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* 드롭다운 메뉴 */}
@@ -220,7 +220,7 @@ export function Header() {
               </div>
             ) : (
               <Link to="/login"
-                className="flex items-center gap-1.5 px-5 xl:px-6 py-2 rounded-full bg-[#153956] border border-[#153956] text-white text-sm hover:bg-[#2D5E88] hover:border-[#2D5E88] transition-all font-medium">
+                className="flex items-center gap-1.5 px-5 xl:px-6 py-2 rounded-full bg-[#F3F0EA] border border-[#F3F0EA]/30 text-[#132B3F] text-sm hover:bg-white transition-all font-medium">
                 <User className="w-3.5 h-3.5" />
                 로그인
               </Link>
@@ -231,7 +231,7 @@ export function Header() {
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
             aria-expanded={mobileMenuOpen}
-            className="lg:hidden w-11 h-11 flex items-center justify-center rounded-lg text-[#132B3F] hover:bg-black/5 transition-colors">
+            className="lg:hidden w-11 h-11 flex items-center justify-center rounded-lg text-[#F3F0EA] hover:bg-white/10 transition-colors">
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -244,7 +244,7 @@ export function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden border-t border-[#153956]/10 bg-[#F3F0EA] overflow-hidden"
+            className="lg:hidden border-t border-[#F3F0EA]/10 bg-[#0A1F33]/95 backdrop-blur-xl overflow-hidden"
           >
             <nav className="max-w-[1470px] mx-auto px-4 sm:px-8 py-6 flex flex-col gap-1">
               {getNavItems(user).map(item => {
@@ -254,7 +254,7 @@ export function Header() {
                   return (
                     <button key={item.to}
                       onClick={() => { go(pageKey as any); setMobileMenuOpen(false); }}
-                      className={"text-base font-medium transition-colors py-3 border-b border-[#153956]/10 text-left " + (isActive ? 'text-[#2D5E88]' : 'text-[#132B3F] hover:text-[#2D5E88]')}>
+                      className={"text-base font-medium transition-colors py-3 border-b border-[#F3F0EA]/10 text-left " + (isActive ? 'text-[#A9C5D9]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
                       {item.label}
                     </button>
                   );
@@ -262,15 +262,15 @@ export function Header() {
                 if (item.label === 'artheus ON') {
                   return (
                     <Link key={item.to} to={item.to} onClick={() => setMobileMenuOpen(false)}
-                      className="text-base font-black italic transition-colors py-3 border-b border-[#153956]/10"
-                      style={{ fontFamily: "'Syne', 'DM Sans', sans-serif", color: '#153956', letterSpacing: '-0.02em' }}>
+                      className="text-base font-black italic transition-colors py-3 border-b border-[#F3F0EA]/10"
+                      style={{ fontFamily: "'Syne', 'DM Sans', sans-serif", color: '#F3F0EA', letterSpacing: '-0.02em' }}>
                       artheus ON
                     </Link>
                   );
                 }
                 return (
                 <Link key={item.to} to={item.to} onClick={() => setMobileMenuOpen(false)}
-                  className={`text-base font-medium transition-colors py-3 border-b border-[#153956]/10 ${item.highlight ? 'text-[#2D5E88]' : 'text-[#132B3F] hover:text-[#2D5E88]'}`}>
+                  className={`text-base font-medium transition-colors py-3 border-b border-[#F3F0EA]/10 ${item.highlight ? 'text-[#A9C5D9]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]'}`}>
                   {item.label}
                 </Link>
                 );
@@ -314,7 +314,7 @@ export function Header() {
                 </div>
               ) : (
                 <Link to="/login" onClick={() => setMobileMenuOpen(false)}
-                  className="mt-4 px-6 py-3 rounded-full bg-[#153956] text-white text-center text-sm font-semibold hover:bg-[#2D5E88] transition-all">
+                  className="mt-4 px-6 py-3 rounded-full bg-[#F3F0EA] text-[#132B3F] text-center text-sm font-semibold hover:bg-white transition-all">
                   로그인
                 </Link>
               )}

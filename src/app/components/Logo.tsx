@@ -1,6 +1,6 @@
 interface LogoProps {
   className?: string;
-  variant?: 'full' | 'icon';
+  variant?: 'full' | 'icon' | 'symbol';
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -21,9 +21,26 @@ export function Logo({ className = '', variant = 'full', size = 'md' }: LogoProp
     );
   }
 
+  if (variant === 'symbol') {
+    const imgSize = { sm: 'h-6', md: 'h-8', lg: 'h-10' }[size];
+    return (
+      <div className={`flex items-center gap-2.5 ${className}`}>
+        <img
+          src="/uploads/20261123-213903-image-9ydr.png"
+          alt="ARTHEUS 심볼"
+          className={`${imgSize} w-auto`}
+          draggable={false}
+        />
+        <span className="text-[#F3F0EA] font-black tracking-[0.08em] text-sm">
+          artheus
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className={`font-black tracking-tight ${sizeClasses[size]} ${className}`}>
-      <div className="text-[#132B3F] tracking-[0.1em]">artheus</div>
+      <div className="text-[#F3F0EA] tracking-[0.1em]">artheus</div>
     </div>
   );
 }

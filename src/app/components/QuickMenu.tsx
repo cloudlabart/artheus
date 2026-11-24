@@ -10,14 +10,12 @@ const ITEMS = [
     location: 'quick_menu_consult',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
-        <rect x="2" y="3" width="20" height="14" rx="3" fill="#2D5E88" opacity="0.14"/>
-        <rect x="2" y="3" width="20" height="14" rx="3" stroke="#153956" strokeWidth="1.5"/>
-        <path d="M7 8h10M7 12h6" stroke="#153956" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M6 17l-3 4" stroke="#153956" strokeWidth="1.5" strokeLinecap="round"/>
+        <rect x="2" y="3" width="20" height="14" rx="3" fill="#A9C5D9" opacity="0.15"/>
+        <rect x="2" y="3" width="20" height="14" rx="3" stroke="#A9C5D9" strokeWidth="1.5"/>
+        <path d="M7 8h10M7 12h6" stroke="#A9C5D9" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M6 17l-3 4" stroke="#A9C5D9" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
-    activeGlow: 'rgba(45,94,136,0.18)',
-    activeBorder: '#2D5E88',
   },
   {
     id: 'insta',
@@ -26,14 +24,12 @@ const ITEMS = [
     location: 'quick_menu_insta',
     icon: (
       <svg viewBox="0 0 24 24" className="w-6 h-6">
-        <rect x="2" y="2" width="20" height="20" rx="6" fill="#2D5E88" opacity="0.12"/>
-        <rect x="2" y="2" width="20" height="20" rx="6" stroke="#2D5E88" strokeWidth="1.5" fill="none"/>
-        <circle cx="12" cy="12" r="4" stroke="#2D5E88" strokeWidth="1.5" fill="none"/>
-        <circle cx="17.5" cy="6.5" r="1" fill="#2D5E88"/>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="#A9C5D9" opacity="0.12"/>
+        <rect x="2" y="2" width="20" height="20" rx="6" stroke="#A9C5D9" strokeWidth="1.5" fill="none"/>
+        <circle cx="12" cy="12" r="4" stroke="#A9C5D9" strokeWidth="1.5" fill="none"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="#A9C5D9"/>
       </svg>
     ),
-    activeGlow: 'rgba(45,94,136,0.15)',
-    activeBorder: '#2D5E88',
   },
 ];
 
@@ -47,16 +43,16 @@ export function QuickMenu() {
         const inner = (
           <div
             onClick={() => setActiveId(item.id)}
-            className="w-[68px] h-[68px] rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors duration-200 select-none"
+            className="w-[68px] h-[68px] rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors duration-200 select-none backdrop-blur-md"
             style={{
-              background: '#FAF8F4',
-              border: `1px solid ${isActive ? '#153956' : 'rgba(21,57,86,0.18)'}`,
+              background: 'rgba(21, 57, 86, 0.4)',
+              border: `1px solid ${isActive ? 'rgba(243,240,234,0.3)' : 'rgba(243,240,234,0.1)'}`,
             }}
           >
             {item.icon}
             <span
               className="text-[10px] font-semibold leading-none"
-              style={{ color: isActive ? '#132B3F' : '#4A6276' }}
+              style={{ color: isActive ? '#F3F0EA' : '#8CADC8' }}
             >
               {item.label}
             </span>
@@ -88,7 +84,7 @@ export function QuickMenu() {
               width: activeId === item.id ? 16 : 6,
               height: 6,
               borderRadius: 3,
-              background: activeId === item.id ? '#2D5E88' : '#A9C5D9',
+              background: activeId === item.id ? '#A9C5D9' : 'rgba(169,197,217,0.3)',
             }}
           />
         ))}
@@ -98,7 +94,7 @@ export function QuickMenu() {
       <div
         className="mt-2 text-[8px] font-black tracking-[0.2em]"
         style={{
-          color: '#7E99AE',
+          color: 'rgba(169,197,217,0.4)',
           writingMode: 'vertical-rl',
           transform: 'rotate(180deg)',
           letterSpacing: '0.25em',

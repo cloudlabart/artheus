@@ -53,12 +53,12 @@ const LIST_OF: Partial<Record<PageKey, PageKey>> = {
   'column-detail': 'column', 'zine-detail': 'zine', 'notice-detail': 'notices',
 };
 
-// 데스크톱 레이아웃
+// 데스크톱 레이아웃 — 코트 배경 위 콘텐츠
 function DL({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F0EA] text-[#132B3F]">
+    <div className="min-h-screen flex flex-col text-[#F3F0EA] relative" style={{ background: '#0A1F33' }}>
       <Header />
-      <main className="flex-1 pt-16 lg:pt-20">{children}</main>
+      <main className="flex-1 relative z-10">{children}</main>
       <Footer />
       <QuickMenu />
     </div>
