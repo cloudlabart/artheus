@@ -1,3 +1,4 @@
+import { motion } from 'motion/react';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { InstagramConsultButton } from '../components/InstagramConsultButton';
 
@@ -23,58 +24,77 @@ export function VisionPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F3F0EA] text-[#132B3F]">
-      {/* 매거진 히어로 */}
-      <section className="relative overflow-hidden bg-[#132B3F] text-white">
-        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-          <span className="text-[clamp(8rem,25vw,28rem)] font-black leading-[0.8] tracking-[-0.06em] text-white/[0.03] whitespace-nowrap" style={{ fontFamily: "'Syne', 'DM Sans', sans-serif" }}>VISION</span>
-        </div>
-        <div className="max-w-[1360px] mx-auto px-5 sm:px-8 py-16 sm:py-24 relative z-10">
-          <p className="text-[10px] font-black tracking-[0.2em] text-[#A9C5D9] uppercase mb-4">Vision</p>
-          <h1 className="keep-ko text-[36px] sm:text-[52px] lg:text-[64px] font-black leading-[1.05] tracking-[-0.04em] text-white whitespace-pre-line">{content.vision_headline}</h1>
-          <p className="keep-ko mt-6 text-base sm:text-lg leading-[1.75] text-[#DCE9F2]/80 max-w-2xl">{content.vision_text}</p>
+    <div className="min-h-screen text-[#F3F0EA]">
+      {/* 히어로 — 풀 블리드 이미지 */}
+      <section className="relative overflow-hidden min-h-[60vh] lg:min-h-[70vh] flex items-end">
+        <img
+          src="/uploads/20261124-105231-파우더-블루-코트-생생한-한-점-0os2.png"
+          alt="파우더 블루 코트 — ARTHEUS 비전"
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A1F33] via-[#0A1F33]/40 to-transparent" />
+        <div className="relative z-10 max-w-[1200px] mx-auto px-5 sm:px-8 pb-12 sm:pb-16 w-full">
+          <span className="court-label block mb-4">Vision</span>
+          <h1 className="keep-ko text-[36px] sm:text-[52px] lg:text-[64px] font-black leading-[1.05] tracking-[-0.04em] text-[#F3F0EA] whitespace-pre-line">{content.vision_headline}</h1>
+          <p className="keep-ko mt-4 text-base sm:text-lg leading-[1.75] text-[#F3F0EA]/80 max-w-2xl">{content.vision_text}</p>
         </div>
       </section>
 
-      {/* 스탯 — 스코어보드 */}
-      <section className="bg-[#153956]">
-        <div className="max-w-[1360px] mx-auto px-5 sm:px-8 py-10 sm:py-14">
+      {/* 스탯 */}
+      <section className="border-y border-[#A9C5D9]/12">
+        <div className="max-w-[1200px] mx-auto px-5 sm:px-8 py-10 sm:py-14">
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-0">
             {stats.map((s, i) => (
-              <div key={i} className={`text-center ${i > 0 ? 'md:border-l md:border-white/10' : ''}`}>
-                <dd className="text-4xl sm:text-5xl font-black tracking-[-0.03em] text-white">{s.num}</dd>
-                <dt className="text-[10px] font-bold tracking-[0.15em] text-[#A9C5D9] uppercase mt-2">{s.label}</dt>
+              <div key={i} className={`text-center ${i > 0 ? 'md:border-l md:border-[#A9C5D9]/12' : ''}`}>
+                <dd className="text-4xl sm:text-5xl font-black tracking-[-0.03em] text-[#F3F0EA]">{s.num}</dd>
+                <dt className="text-[10px] font-bold tracking-[0.15em] text-[#A9C5D9]/60 uppercase mt-2">{s.label}</dt>
               </div>
             ))}
           </dl>
         </div>
       </section>
 
-      {/* 스토리 — 에디토리얼 */}
-      <section className="max-w-[1360px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+      {/* 스토리 + 사진 */}
+      <section className="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
-          <div className="lg:col-span-4">
-            <p className="text-[10px] font-black tracking-[0.2em] text-[#2D5E88] uppercase mb-3">Our Story</p>
-            <h2 className="keep-ko text-3xl sm:text-[40px] font-black tracking-[-0.03em] text-[#132B3F] leading-[1.1]">왜<br />아터스인가</h2>
+          <div className="lg:col-span-5">
+            <span className="court-label block mb-3">Our Story</span>
+            <h2 className="keep-ko text-3xl sm:text-[40px] font-black tracking-[-0.03em] text-[#F3F0EA] leading-[1.1]">왜<br />아터스인가</h2>
+            <div className="mt-8 rounded-2xl overflow-hidden">
+              <img
+                src="/uploads/20261124-105219-아르테우스-하늘과-코트의-리듬-g8vm.png"
+                alt="아터스, 하늘과 코트의 리듬"
+                className="w-full aspect-[4/3] object-cover"
+                draggable={false}
+              />
+            </div>
           </div>
-          <div className="lg:col-span-8 keep-ko text-base sm:text-[17px] leading-[1.9] text-[#35526B] whitespace-pre-line lg:border-l lg:border-[#153956]/15 lg:pl-16">
-            {content.vision_story}
+          <div className="lg:col-span-7 keep-ko text-base sm:text-[17px] leading-[1.9] text-[#8CADC8]/80 whitespace-pre-line lg:border-l lg:border-[#A9C5D9]/12 lg:pl-16 flex items-center">
+            <p>{content.vision_story}</p>
           </div>
         </div>
       </section>
 
-      {/* 가치 — 매거진 그리드 */}
-      <section className="border-t border-[#153956]/15 bg-[#FAF8F4]">
-        <div className="max-w-[1360px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
-          <p className="text-[10px] font-black tracking-[0.2em] text-[#2D5E88] uppercase mb-3">Core Values</p>
-          <h2 className="keep-ko text-3xl sm:text-[40px] font-black tracking-[-0.03em] text-[#132B3F] mb-12">핵심 가치</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-[#153956]/15 rounded-2xl overflow-hidden">
+      {/* 가치 */}
+      <section className="border-t border-[#A9C5D9]/12">
+        <div className="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24">
+          <span className="court-label block mb-3">Core Values</span>
+          <h2 className="keep-ko text-3xl sm:text-[40px] font-black tracking-[-0.03em] text-[#F3F0EA] mb-12">핵심 가치</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {values.map((v, i) => (
-              <div key={i} className={`p-6 sm:p-10 ${i < 2 ? 'border-b border-[#153956]/15' : ''} ${i % 2 === 0 ? 'md:border-r md:border-[#153956]/15' : ''}`}>
-                <span className="text-[48px] font-black tracking-[-0.04em] text-[#153956]/10 leading-none">0{i + 1}</span>
-                <h3 className="keep-ko mt-2 text-lg sm:text-xl font-black text-[#132B3F] leading-[1.35]">{v.title}</h3>
-                <p className="keep-ko mt-3 text-[15px] leading-[1.8] text-[#35526B]">{v.desc}</p>
-              </div>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.6 }}
+                className="court-grid-cell"
+              >
+                <span className="text-[48px] font-black tracking-[-0.04em] text-[#A9C5D9]/10 leading-none">0{i + 1}</span>
+                <h3 className="keep-ko mt-2 text-lg sm:text-xl font-bold text-[#F3F0EA] leading-[1.35]">{v.title}</h3>
+                <p className="keep-ko mt-3 text-[15px] leading-[1.8] text-[#8CADC8]/70">{v.desc}</p>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -82,30 +102,37 @@ export function VisionPage() {
 
       {/* 타임라인 */}
       {timeline.length > 0 && (
-        <section className="max-w-[1360px] mx-auto px-5 sm:px-8 py-16 sm:py-24 border-t border-[#153956]/15">
-          <p className="text-[10px] font-black tracking-[0.2em] text-[#2D5E88] uppercase mb-3">Timeline</p>
-          <h2 className="keep-ko text-3xl sm:text-[40px] font-black tracking-[-0.03em] text-[#132B3F] mb-12">걸어온 길</h2>
+        <section className="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24 border-t border-[#A9C5D9]/12">
+          <span className="court-label block mb-3">Timeline</span>
+          <h2 className="keep-ko text-3xl sm:text-[40px] font-black tracking-[-0.03em] text-[#F3F0EA] mb-12">걸어온 길</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {timeline.map((t: { year: string; event: string; detail: string }, i: number) => (
-              <div key={i} className="rounded-2xl border border-[#153956]/15 bg-[#FAF8F4] p-6 sm:p-8">
-                <p className="text-[48px] font-black tracking-[-0.04em] text-[#153956]/15 leading-none">{t.year}</p>
-                <h3 className="keep-ko mt-2 text-base sm:text-lg font-black text-[#132B3F]">{t.event}</h3>
-                <p className="keep-ko mt-2 text-[14px] leading-[1.7] text-[#35526B]">{t.detail}</p>
-              </div>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.5 }}
+                className="court-card p-6 sm:p-8"
+              >
+                <p className="text-[48px] font-black tracking-[-0.04em] text-[#A9C5D9]/15 leading-none">{t.year}</p>
+                <h3 className="keep-ko mt-2 text-base sm:text-lg font-bold text-[#F3F0EA]">{t.event}</h3>
+                <p className="keep-ko mt-2 text-[14px] leading-[1.7] text-[#8CADC8]/70">{t.detail}</p>
+              </motion.div>
             ))}
           </div>
         </section>
       )}
 
       {/* CTA */}
-      <section className="bg-[#132B3F] text-white">
-        <div className="max-w-[1360px] mx-auto px-5 sm:px-8 py-16 sm:py-24 text-center">
-          <p className="text-[10px] font-black tracking-[0.2em] text-[#A9C5D9] uppercase mb-4">Get Started</p>
-          <h2 className="keep-ko text-3xl sm:text-[40px] font-black leading-[1.15] tracking-[-0.03em] text-white">artheus와 함께 시작하세요.</h2>
-          <div className="w-16 h-0.5 bg-[#A9C5D9]/40 mx-auto my-6" />
-          <p className="keep-ko text-base leading-[1.75] text-[#DCE9F2]/80">인스타그램 DM으로 상담을 시작할 수 있습니다.</p>
+      <section className="border-t border-[#A9C5D9]/12">
+        <div className="max-w-[1200px] mx-auto px-5 sm:px-8 py-16 sm:py-24 text-center">
+          <span className="court-label block mb-4">Get Started</span>
+          <h2 className="keep-ko text-3xl sm:text-[40px] font-black leading-[1.15] tracking-[-0.03em] text-[#F3F0EA]">artheus와 함께 시작하세요.</h2>
+          <div className="w-16 h-0.5 bg-[#A9C5D9]/25 mx-auto my-6" />
+          <p className="keep-ko text-base leading-[1.75] text-[#8CADC8]/70">인스타그램 DM으로 상담을 시작할 수 있습니다.</p>
           <div className="mt-8 flex justify-center">
-            <InstagramConsultButton location="vision_cta" label="상담 문의하기" tone="on-blue" className="px-8 py-3.5" />
+            <InstagramConsultButton location="vision_cta" label="상담 문의하기" tone="on-blue" className="px-8 py-3.5 !bg-[#F3F0EA] !text-[#132B3F] hover:!bg-white" />
           </div>
         </div>
       </section>

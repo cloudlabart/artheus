@@ -146,6 +146,22 @@
    "content": "감각 깨우기 & 즉흥 연기\n장면 연기 & 리액팅\n다양한 장르 실습\n개인 포트폴리오 완성"
   },
   {
+   "id": "prog-7",
+   "title": "UNIV",
+   "tag": "대학입시반",
+   "category": "ADMISSION",
+   "description": "연극영화과·실용음악과 등 대학 입시를 목표로 체계적으로 준비하는 과정입니다.",
+   "content": "대학별 실기 유형 분석\n자유연기 & 지정대본 훈련\n면접 & 구술 대비\n모의 실기고사 & 개인 피드백"
+  },
+  {
+   "id": "prog-8",
+   "title": "BA",
+   "tag": "학사편입반",
+   "category": "ADMISSION",
+   "description": "학사편입·재입학을 통해 연기예술 전공 학위를 취득하려는 배우를 위한 과정입니다.",
+   "content": "편입 실기 & 포트폴리오 준비\n학교별 전형 분석 & 전략\n심화 장면 연기 훈련\n면접 대비 & 자기소개서 코칭"
+  },
+  {
    "id": "prog-3",
    "title": "GRADUATE",
    "tag": "대학원반",
@@ -181,43 +197,35 @@
  "lab": [
   {
    "id": "lab-1",
-   "title": "BREATH LAB",
+   "title": "PHYSICAL THEATRE",
    "status": "ACTIVE",
-   "category": "VOCAL",
-   "description": "호흡과 발성의 정밀한 연구",
-   "content": "정밀한 호흡 패턴 분석\n발성 공명 최적화 훈련\n감정과 호흡 연결 연습\n실전 적용 피드백"
+   "category": "MOVEMENT",
+   "description": "신체 중심 연극 — 몸이 곧 언어가 되는 훈련",
+   "content": "피지컬 시어터 기본 원리\n르코크·뷔에크 메소드 적용\n마임·제스처 기반 장면 창작\n신체 앙상블 & 공간 활용"
   },
   {
    "id": "lab-2",
-   "title": "STAGE VISION",
+   "title": "DRAMA CREATE",
    "status": "ACTIVE",
-   "category": "SPACE",
-   "description": "공간 활용과 시각적 표현",
-   "content": "무대 공간 인식 & 활용\n시각적 구도 설계 훈련\n앙상블 협업 & 배치\n카메라 앵글 대응법"
+   "category": "TEXT",
+   "description": "배우가 직접 장면을 만드는 창작 연극 연구소",
+   "content": "디바이징 씨어터 기초\n즉흥에서 장면 구조화\n텍스트 & 무대 동시 창작\n공연 형태 실험 & 발표"
   },
   {
    "id": "lab-3",
-   "title": "MOVEMENT ATLAS",
+   "title": "ACTING METHODPHYSICS",
    "status": "ACTIVE",
-   "category": "MOVEMENT",
-   "description": "신체 움직임 데이터베이스",
-   "content": "신체 언어 패턴 분류\n캐릭터별 움직임 설계\n현대무용 기초 접목\n무브먼트 즉흥 훈련"
+   "category": "ACTING",
+   "description": "연기 방법론의 물리학 — 테크닉을 분해하고 재조립하는 연구",
+   "content": "스타니슬랍스키·마이즈너·체홉 비교 분석\n방법론별 실습 & 적용\n배우 개인에 맞는 메소드 설계\n이론과 실기의 교차 훈련"
   },
   {
    "id": "lab-4",
-   "title": "VOICE PRINT",
-   "status": "BETA",
-   "category": "VOCAL",
-   "description": "감정 분석 기반 목소리 훈련",
-   "content": "감정 주파수 분석\n발성 유형 진단 & 처방\n다층적 감정 표현 훈련\n목소리 개성 개발"
-  },
-  {
-   "id": "lab-5",
-   "title": "SCRIPT DECODER",
-   "status": "BETA",
-   "category": "TEXT",
-   "description": "AI 대본 분석 시스템",
-   "content": "AI 기반 대본 구조 분석\n캐릭터 심리 지도 작성\n서브텍스트 해독 훈련\n시대·장르 맥락 이해"
+   "title": "ACTING & META",
+   "status": "ACTIVE",
+   "category": "ACTING",
+   "description": "연기와 메타인지 — 자기 연기를 관찰하고 교정하는 훈련",
+   "content": "메타인지 기반 자기 분석\n영상 리뷰 & 피드백 루프\n감정·신체·텍스트 삼각 점검\n연습 설계 & 성장 추적"
   }
  ],
  "notices": [

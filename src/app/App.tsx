@@ -17,6 +17,13 @@ import { CursorGlow } from './components/CursorGlow';
 import { PageKey, _registerNavHandler } from './nav';
 import { Home } from './pages/Home';
 import { Placeholder } from './pages/Placeholder';
+import { VisionPage } from './pages/VisionPage';
+import { CoachesPage } from './pages/CoachesPage';
+import { ProgramsPage } from './pages/ProgramsPage';
+import { LabPage } from './pages/LabPage';
+import { NoticesPage } from './pages/NoticesPage';
+import { ZinePage } from './pages/ZinePage';
+import { ContactPage } from './pages/ContactPage';
 import { LoginPage } from './lms/LoginPage';
 import { AdminRoutes, CoachRoutes, MyRoutes } from './lms/Dashboards';
 
@@ -65,8 +72,23 @@ function DL({ children }: { children: ReactNode }) {
   );
 }
 
+// 전용 페이지 매핑
+const PAGE_COMPONENTS: Partial<Record<PageKey, () => JSX.Element>> = {
+  vision: () => <VisionPage />,
+  programs: () => <ProgramsPage />,
+  'programs-admission': () => <ProgramsPage />,
+  coaches: () => <CoachesPage />,
+  lab: () => <LabPage />,
+  notices: () => <NoticesPage />,
+  zine: () => <ZinePage />,
+  contact: () => <ContactPage />,
+  consult: () => <ContactPage />,
+};
+
 // 공개 사이트 페이지 렌더러
 function PublicPageRenderer({ page, onBack }: { page: PageKey; onBack: (to: PageKey) => () => void }) {
+  const Component = PAGE_COMPONENTS[page];
+  if (Component) return <Component />;
   const meta = PAGES[page];
   if (!meta) return <Home />;
   const list = LIST_OF[page];
