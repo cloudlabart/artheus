@@ -23,7 +23,15 @@
     </div>
   </div>
   <div class="card"><h2>3. 미리보기 <small id="pvSum"></small></h2><div id="preview"></div>
-    <div class="row"><span class="spacer"></span><button class="btn" id="copyAll">복사로 보내기</button><button class="btn primary" id="send">알림톡 발송</button></div></div>
+    <div class="row"><span class="spacer"></span><button class="btn" id="copyAll">복사로 보내기</button><button class="btn" id="smsTest" hidden>문자 시험</button><button class="btn" id="smsSend" hidden>📱 아이폰 문자로 보내기</button><button class="btn primary" id="send">알림톡 발송</button></div></div>
+  <div class="card" id="smsHelp" hidden><h2>아이폰 문자 쓰는 법</h2><div class="small" style="line-height:1.8">
+    Mac 메시지 앱을 통해 <b>원장님 아이폰 번호로</b> 문자가 나가요. 외부 서비스·추가 요금 없이 휴대폰 요금제로 보냅니다.<br>
+    1) 아이폰 설정 › 앱 › 메시지 › <b>문자 메시지 전달</b>에서 이 Mac 켜기 (Mac과 아이폰이 같은 Apple 계정)<br>
+    2) 처음 보낼 때 "터미널이 메시지를 제어하려고 합니다" 창이 뜨면 <b>허용</b><br>
+    3) <b>문자 시험</b>으로 내 번호에 먼저 보내 보세요.<br>
+    · 한 번에 30명씩, 1.5초 간격으로 보냅니다. 통신사는 개인 번호의 대량 발송을 막을 수 있어요(하루 수백 건 이상은 피하세요).<br>
+    · 이벤트·모집 같은 <b>광고성 문자</b>는 수신 동의한 사람에게만, 맨 앞에 <b>(광고)</b>와 학원 이름, 끝에 수신 거부 방법을 넣어야 해요. 수강료·상담 안내 같은 정보성 문자는 해당 없음.
+  </div></div>
   <div class="card"><h2>보낸 기록</h2><div id="log"></div></div>
 </div>
 <script>
@@ -92,7 +100,7 @@ function preview() {
 }
 async function renderLog() {
   const log = (await M.list()).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 30);
-  K.table($('#log'), log, [{ label: '보낸 때', render: (m) => fmtDT(m.at) }, { label: '받는 사람', k: 'name' }, { label: '방법', render: (m) => m.channel === 'kakao' ? '알림톡' : '복사' }, { label: '내용', render: (m) => `<span class="small">${esc(m.text.slice(0, 60))}</span>` }]);
+  K.table($('#log'), log, [{ label: '보낸 때', render: (m) => fmtDT(m.at) }, { label: '받는 사람', k: 'name' }, { label: '방법', render: (m) => m.channel === 'kakao' ? '알림톡' : m.channel === 'sms' ? (m.status === 'failed' ? '문자 실패' : '아이폰 문자') : '복사' }, { label: '내용', render: (m) => `<span class="small">${esc(m.text.slice(0, 60))}</span>` }]);
 }
 $('#tpl').onchange = applyTpl;
 ['#text', '#seg', '#stage', '#to'].forEach((s) => $(s).addEventListener(s === '#text' ? 'input' : 'change', preview));
@@ -111,6 +119,30 @@ $('#send').onclick = async () => {
     const r = await K.api('/__studio/api/kakao/send', { method: 'POST', body: { templateId: tplId, messages: list.map((x) => ({ to: x.to, text: x.text, variables: x.variables, contactId: x.c.id, name: x.c.name })) } });
     toast(`${r.count}건 발송 요청 완료`); renderLog(); learnEdit();
   } catch (e) { toast(e.message); }
+};
+/* ── 아이폰 문자 (Mac 메시지 앱) ── */
+K.api('/__studio/api/sms/status').then((s) => { if (s.available) { $('#smsSend').hidden = false; $('#smsTest').hidden = false; $('#smsHelp').hidden = false; } }).catch(() => {});
+$('#smsTest').onclick = async () => {
+  const to = prompt('시험으로 받을 휴대폰 번호 (010…)'); if (!to) return;
+  try { const r = await K.api('/__studio/api/sms/send', { method: 'POST', body: { messages: [{ to, text: `[${academy}] 스튜디오 문자 시험입니다.`, name: '시험' }] } });
+    toast(r.sent ? '보냈어요. 휴대폰을 확인하세요.' : (r.failed[0]?.error || '실패')); renderLog(); } catch (e) { toast(e.message); }
+};
+$('#smsSend').onclick = async () => {
+  const list = rows.filter((r) => r.to);
+  if (!list.length) return toast('번호가 있는 받는 사람이 없어요');
+  if (!confirm(`${list.length}명에게 원장님 아이폰 번호로 문자를 보냅니다.\n광고성 문자라면 (광고) 표시·수신 동의를 확인하셨나요?\n보낼까요?`)) return;
+  const btn = $('#smsSend'); btn.disabled = true; let sent = 0; const failed = [];
+  try {
+    for (let i = 0; i < list.length; i += 30) {
+      btn.textContent = `보내는 중… ${Math.min(i, list.length)}/${list.length}`;
+      const chunk = list.slice(i, i + 30);
+      const r = await K.api('/__studio/api/sms/send', { method: 'POST', body: { messages: chunk.map((x) => ({ to: x.to, text: x.text, contactId: x.c.id, name: x.c.name })) } });
+      sent += r.sent; failed.push(...r.failed);
+      if (r.failed.some((f) => /계정이 없어요|권한이 없어요/.test(f.error))) break;
+    }
+    toast(failed.length ? `${sent}건 보냄 · ${failed.length}건 실패: ${failed[0].error}` : `${sent}건 보냈어요`);
+  } catch (e) { toast(e.message); }
+  btn.disabled = false; btn.textContent = '📱 아이폰 문자로 보내기'; renderLog(); learnEdit();
 };
 $('#copyAll').onclick = async () => {
   await copy(rows.map((r) => `▶ ${r.c.name} (${r.to || '번호 없음'})\n${r.text}`).join('\n\n'));

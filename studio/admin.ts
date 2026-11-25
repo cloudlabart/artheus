@@ -84,6 +84,39 @@ class Store {
   }
 }
 
+/* ── 아이폰 문자 (Mac 메시지 앱 → 연결된 아이폰으로 SMS) ──
+   외부 서비스 없이 원장님 휴대폰 요금제로 보냄. 아이폰 설정 › 메시지 › 문자 메시지 전달 › 이 Mac 켜기 필요.
+   번호·문구는 osascript 인자로만 넘김(스크립트에 끼워 넣지 않음 → 주입 차단). */
+const SMS_SCRIPT = `on run argv
+  set num to item 1 of argv
+  set msg to item 2 of argv
+  tell application "Messages"
+    try
+      set svc to 1st account whose service type = SMS
+      send msg to participant num of svc
+    on error
+      set svc to 1st service whose service type = SMS
+      send msg to buddy num of svc
+    end try
+  end tell
+end run`;
+export function smsNumber(raw: string) {
+  const d = String(raw || '').replace(/\D/g, '');
+  if (/^01[016789]\d{7,8}$/.test(d)) return '+82' + d.slice(1);
+  if (/^8201[016789]\d{7,8}$/.test(d)) return '+' + d;
+  return '';
+}
+function smsSendOne(num: string, text: string) {
+  const r = spawnSync('osascript', ['-e', SMS_SCRIPT, num, text], { encoding: 'utf8', timeout: 20000 });
+  if (r.status === 0) return { ok: true };
+  const err = ((r.stderr || '') + (r.error?.message || '')).trim();
+  return { ok: false, error: /SMS|account|service|-1728|-1719/.test(err)
+    ? '메시지 앱에 문자(SMS) 계정이 없어요. 아이폰 설정 › 메시지 › 문자 메시지 전달에서 이 Mac을 켜 주세요.'
+    : /not allowed|-1743|권한/.test(err) ? '메시지 앱 제어 권한이 없어요. Mac 시스템 설정 › 개인정보 보호 및 보안 › 자동화에서 터미널 → 메시지를 켜 주세요.'
+    : err.slice(0, 200) || '보내지 못했어요.' };
+}
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 const SECRET_KEYS = ['solapi.apiKey', 'solapi.apiSecret', 'youtube.apiKey', 'instagram.accessToken', 'image.geminiKey', 'image.openaiKey'];
 function getPath(o: Json, p: string) { return p.split('.').reduce((a, k) => (a ? a[k] : undefined), o); }
 function mask(c: Json) {
@@ -323,6 +356,25 @@ export function createAdmin(root: string, here: string, jm: JobManager) {
     if (url === '/__studio/api/youtube') { try { send(res, 200, await youtubeSummary(store.config())); } catch (e: any) { send(res, 400, { error: e.message }); } return true; }
     if (url === '/__studio/api/instagram') { try { send(res, 200, await instagramSummary(store.config())); } catch (e: any) { send(res, 400, { error: e.message }); } return true; }
 
+    /* 아이폰 문자 발송 (Mac 전용, 한 번에 30건까지 · 건당 1.5초 간격) */
+    if (url === '/__studio/api/sms/status') { send(res, 200, { available: process.platform === 'darwin' }); return true; }
+    if (url === '/__studio/api/sms/send' && m === 'POST') {
+      if (process.platform !== 'darwin') { send(res, 400, { error: '아이폰 문자는 Mac에서만 보낼 수 있어요.' }); return true; }
+      const b = await body(req);
+      const msgs = (Array.isArray(b.messages) ? b.messages : []).filter((x: Json) => x && x.to && x.text).slice(0, 30);
+      if (!msgs.length) { send(res, 400, { error: '보낼 대상이 없습니다.' }); return true; }
+      const log = store.read('messages'); const results: Json[] = [];
+      for (let i = 0; i < msgs.length; i++) {
+        const x = msgs[i]; const num = smsNumber(x.to); const text = String(x.text).slice(0, 2000);
+        const r = num ? smsSendOne(num, text) : { ok: false, error: '휴대폰 번호(010…)가 아니에요.' };
+        results.push({ name: x.name, to: x.to, ...r });
+        log.push({ id: uid(), channel: 'sms', contactId: x.contactId, name: x.name, text, status: r.ok ? 'sent' : 'failed', error: r.ok ? undefined : r.error, at: new Date().toISOString() });
+        if (!r.ok && /계정이 없어요|권한이 없어요/.test(r.error || '')) break; // 설정 문제면 나머지도 실패하니 멈춤
+        if (i < msgs.length - 1) await sleep(1500);
+      }
+      store.write('messages', log);
+      send(res, 200, { sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok), total: msgs.length }); return true;
+    }
     /* 카카오 알림톡 발송 (솔라피) */
     if (url === '/__studio/api/kakao/send' && m === 'POST') {
       const b = await body(req);
