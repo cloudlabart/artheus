@@ -44,14 +44,17 @@ const NESTED_MSG = '스튜디오가 Claude Code 안에서 실행되고 있어 Cl
 
 /* 디자인 도구: 이미지 생성(tools/studio/gen-image.mjs) · 화면 캡처(tools/studio/shot.mjs) — 스킬 site-design-plan · site-image · site-review · site-copy */
 const DESIGN_TOOLS = ['Bash(node tools/studio/gen-image.mjs:*)', 'Bash(node tools/studio/shot.mjs:*)'];
-/* AI가 실행을 허용받은 스크립트·도구 코드·설정은 AI가 고치지 못하게 (고친 뒤 실행하는 우회 차단) */
-const LOCKED_PATHS = ['./tools/**', './studio/**', './node_modules/**', './.claude/**', './package.json', './package-lock.json', './vite.config.ts', './.github/**', './server/**', './.studio/config/**'];
-const DENY_TOOLS = LOCKED_PATHS.flatMap((p) => [`Edit(${p})`, `Write(${p})`, `MultiEdit(${p})`]);
-const ALLOWED_TOOLS = ['Read', 'Edit', 'MultiEdit', 'Write', 'Glob', 'Grep', 'Skill', 'TodoWrite', ...DESIGN_TOOLS];
+/* 파일 수정은 허용한 경로에서만 (허용 목록 방식 · permission-mode default 라 그 밖은 자동 거부)
+   → tools/·studio/·.git/·node_modules/·설정 파일·.studio/ 등 실행되는 코드와 키는 AI가 고칠 수 없음 */
+const editIn = (paths: string[]) => paths.flatMap((p) => [`Edit(${p})`, `Write(${p})`, `MultiEdit(${p})`]);
+const BASE_TOOLS = ['Read', 'Glob', 'Grep', 'Skill', 'TodoWrite'];
+const SITE_EDIT = editIn(['./src/**', './index.html', './public/images/gen/**']);
+const COLUMN_EDIT = editIn(['./content/column/**', './content/audits/**', './content/plan.md']);
+const ALLOWED_TOOLS = [...BASE_TOOLS, ...SITE_EDIT, ...DESIGN_TOOLS];
 
 /* 칼럼 작업용: 웹 조사 + 칼럼 스크립트만 추가로 허용 (git·배포는 버튼으로만) */
 const PY = process.platform === 'win32' ? 'python' : 'python3';
-const COLUMN_TOOLS = [...ALLOWED_TOOLS, 'WebSearch', 'WebFetch', 'Task', 'Agent', 'Skill', 'TodoWrite',
+const COLUMN_TOOLS = [...BASE_TOOLS, ...COLUMN_EDIT, 'WebSearch', 'WebFetch', 'Task', 'Agent', 'Skill', 'TodoWrite',
   `Bash(${PY} tools/geo-seo/scripts/seo_lint.py:*)`, `Bash(${PY} tools/geo-seo/scripts/build_site.py:*)`,
   `Bash(${PY} tools/geo-seo/scripts/publish.py naver:*)`, `Bash(${PY} tools/geo-seo/scripts/gsc_opportunities.py:*)`,
   `Bash(${PY} tools/geo-seo/scripts/render_page.py:*)`];
@@ -69,7 +72,7 @@ You are in the COLUMN tab of "아터스 스튜디오". Columns are SEO/GEO artic
 `.trim();
 
 /* 매니저: 큰 요청을 쪼개 서브에이전트에게 맡김 (다른 작업과 동시에 돌지 않는 대신, 안에서 병렬) */
-const MANAGER_TOOLS = [...COLUMN_TOOLS, ...DESIGN_TOOLS, 'Bash(npm run build)', 'Bash(npm run type-check)'];
+const MANAGER_TOOLS = [...COLUMN_TOOLS, ...SITE_EDIT, ...DESIGN_TOOLS, 'Bash(npm run build)', 'Bash(npm run type-check)'];
 const MANAGER_NOTE = `
 You are "아터스 매니저", the admin agent of 아터스 스튜디오 for the ARTHEUS acting-academy website (c-art.co.kr).
 You coordinate work and delegate to subagents with the Task tool. Available subagents (.claude/agents):
@@ -95,7 +98,7 @@ const PUBLISH_PATHS = ['src', 'public', 'content/column', 'content/style', 'cont
 const BLOCK_PATHS = /^(\.studio|server\/data|content\/data|\.env)|(^|\/)\.env|\.(csv|xlsx|sqlite|db|pem|key)$/i;
 const SECRET_RE = /(sk-ant-[A-Za-z0-9_-]{10,}|EAA[A-Za-z0-9]{40,}|AIza[0-9A-Za-z_-]{30,}|ghp_[A-Za-z0-9]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY|(api[_-]?secret|apiKey|access[_-]?token)\s*[:=]\s*['"][A-Za-z0-9_\-]{24,}['"])/;
 function siteChanges(root: string) {
-  const st = spawnSync('git', ['-c', 'core.quotepath=false', 'status', '--porcelain', '-uall'], { cwd: root, encoding: 'utf8' }).stdout || '';
+  const st = spawnSync('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false', '-c', 'core.quotepath=false', 'status', '--porcelain', '-uall'], { cwd: root, encoding: 'utf8' }).stdout || '';
   const all = st.split('\n').filter(Boolean).map((l) => ({ code: l.slice(0, 2).trim(), path: l.slice(3).replace(/^"|"$/g, '').split(' -> ').pop()! }));
   const inScope = (f: string) => PUBLISH_PATHS.some((p) => f === p || f.startsWith(p + '/'));
   return { files: all.filter((f) => inScope(f.path) && !BLOCK_PATHS.test(f.path)), skipped: all.filter((f) => !inScope(f.path) || BLOCK_PATHS.test(f.path)) };
@@ -108,7 +111,7 @@ function runPy(root: string, args: string[]) {
   return { ok: r.status === 0, out: (r.stdout || '') + (r.stderr || ''), error: r.error?.message };
 }
 function runGit(root: string, args: string[]) {
-  const r = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  const r = spawnSync('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'core.fsmonitor=false', ...args], { cwd: root, encoding: 'utf8' });
   return { ok: r.status === 0, out: ((r.stdout || '') + (r.stderr || '')).trim() };
 }
 function articlePath(root: string, slug: string) { return path.join(root, 'content', 'column', slug, 'article.md'); }
@@ -519,7 +522,7 @@ export function artheusStudio(): Plugin {
 
           const tools = kind === 'manager' ? MANAGER_TOOLS : kind === 'column' ? COLUMN_TOOLS : ALLOWED_TOOLS;
           const args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
-            '--permission-mode', 'acceptEdits', '--allowedTools', tools.join(','), '--disallowedTools', DENY_TOOLS.join(',')];
+            '--permission-mode', 'default', '--allowedTools', tools.join(',')];
           if (body.sessionId && /^[\w-]+$/.test(body.sessionId)) args.push('--resume', body.sessionId);
           if (body.model && /^[\w.-]+$/.test(body.model)) args.push('--model', body.model);
 
