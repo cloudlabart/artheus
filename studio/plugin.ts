@@ -44,6 +44,9 @@ const NESTED_MSG = '스튜디오가 Claude Code 안에서 실행되고 있어 Cl
 
 /* 디자인 도구: 이미지 생성(tools/studio/gen-image.mjs) · 화면 캡처(tools/studio/shot.mjs) — 스킬 site-design-plan · site-image · site-review · site-copy */
 const DESIGN_TOOLS = ['Bash(node tools/studio/gen-image.mjs:*)', 'Bash(node tools/studio/shot.mjs:*)'];
+/* AI가 실행을 허용받은 스크립트·도구 코드·설정은 AI가 고치지 못하게 (고친 뒤 실행하는 우회 차단) */
+const LOCKED_PATHS = ['./tools/**', './studio/**', './node_modules/**', './.claude/**', './package.json', './package-lock.json', './vite.config.ts', './.github/**', './server/**', './.studio/config/**'];
+const DENY_TOOLS = LOCKED_PATHS.flatMap((p) => [`Edit(${p})`, `Write(${p})`, `MultiEdit(${p})`]);
 const ALLOWED_TOOLS = ['Read', 'Edit', 'MultiEdit', 'Write', 'Glob', 'Grep', 'Skill', 'TodoWrite', ...DESIGN_TOOLS];
 
 /* 칼럼 작업용: 웹 조사 + 칼럼 스크립트만 추가로 허용 (git·배포는 버튼으로만) */
@@ -240,6 +243,20 @@ export function artheusStudio(): Plugin {
 
       s.middlewares.use(async (req, res, next) => {
         const url = (req.url || '').split('?')[0];
+        // 스튜디오 API 보호: 이 컴퓨터(localhost)에서 연 스튜디오 화면만 허용
+        // (DNS 리바인딩·다른 사이트에서 몰래 보내는 요청 차단 — 원생·상담 데이터와 연동 키가 있음)
+        if (url.startsWith('/__studio')) {
+          const host = String(req.headers.host || '').replace(/:\d+$/, '').replace(/^\[|\]$/g, '');
+          if (!['localhost', '127.0.0.1', '::1'].includes(host)) { res.statusCode = 403; return res.end('스튜디오는 이 컴퓨터(localhost)에서만 열 수 있어요.'); }
+          const m = (req.method || 'GET').toUpperCase();
+          if (m !== 'GET' && m !== 'HEAD') {
+            const site = String(req.headers['sec-fetch-site'] || '');
+            const origin = String(req.headers.origin || '');
+            let originOk = !origin;
+            try { if (origin) { const o = new URL(origin); originOk = ['localhost', '127.0.0.1', '[::1]'].includes(o.hostname) && o.host === req.headers.host; } } catch {}
+            if ((site && site !== 'same-origin' && site !== 'none') || !originOk) { res.statusCode = 403; return res.end('다른 사이트에서 보낸 요청은 막았어요.'); }
+          }
+        }
         // 발행된 칼럼(public/column/…/index.html)을 개발 서버에서도 배포와 똑같이 보여 줌
         if (/^\/column(\/[a-z0-9-]*)?\/?$/.test(url)) {
           const file = path.join(root, 'public', url.replace(/\/?$/, '/index.html'));
@@ -502,7 +519,7 @@ export function artheusStudio(): Plugin {
 
           const tools = kind === 'manager' ? MANAGER_TOOLS : kind === 'column' ? COLUMN_TOOLS : ALLOWED_TOOLS;
           const args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages',
-            '--permission-mode', 'acceptEdits', '--allowedTools', tools.join(',')];
+            '--permission-mode', 'acceptEdits', '--allowedTools', tools.join(','), '--disallowedTools', DENY_TOOLS.join(',')];
           if (body.sessionId && /^[\w-]+$/.test(body.sessionId)) args.push('--resume', body.sessionId);
           if (body.model && /^[\w.-]+$/.test(body.model)) args.push('--model', body.model);
 
