@@ -10,6 +10,7 @@
 - `src/app/lms/` — 로그인·마이페이지(/my)·강사 콘솔(/coach)·관리자(/admin) 화면. 서버는 `server/lms/`(Node 22 내장 SQLite, 외부 서비스 없음). 데이터는 `server/data/`(gitignore, 원생 정보이므로 절대 커밋하지 않음).
 - `src/content/site.json` — 코치·프로그램·LAB·공지·웹진·사이트 문구(기존 사이트에서 옮긴 공개 내용). 서버 없이 사이트에 포함된다. 코치 사진은 `public/coaches/`. Supabase 연결은 없다.
 - `studio/` — 아터스 스튜디오(개발 서버 전용). `shell.html` 브라우저형 셸, `apps/*.html` 운영 앱(CRM·상담·예약·수강료·카카오·인스타·유튜브·웹진·광고·설정), `admin.ts` 데이터·연동 API, `ui.html` 작업실(페이지·칼럼·매니저), `jobs.ts` 동시 작업. 사이트 작업 중에는 고치지 않는다.
+- 디자인 도구: 스킬 `site-design-plan`(계획)·`site-image`(이미지 생성)·`site-review`(캡처 검토·다듬기)·`site-copy`(문구). 스크립트 `tools/studio/gen-image.mjs`(Gemini/OpenAI, 키는 `.studio/config`), `tools/studio/shot.mjs`(화면 캡처 → `.studio/shots`). 이미지 규칙은 `tools/studio/brand-visual.md`(실존 인물 얼굴·가짜 합격 이미지·이미지 속 글자 금지). 생성 이미지는 `public/images/gen/`.
 - `content/column/<slug>/article.md` — 칼럼 원고(frontmatter `status: draft|published`). `content/geo-seo.config.json` — 브랜드·저자·청중·칼럼 디자인 설정.
 - `public/column/`, `public/sitemap.xml`, `public/rss.xml` — `python3 tools/geo-seo/scripts/build_site.py`가 만드는 칼럼 발행본. 직접 고치지 않는다.
 - `.claude/skills/content-*` — 칼럼 기획·작성·검수·발행 스킬. `.claude/agents/` — 서브에이전트(seo-researcher, content-writer, geo-reviewer, site-designer, seo-analyst). `tools/geo-seo/` — 스크립트와 작성 기준.

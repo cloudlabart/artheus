@@ -73,6 +73,20 @@ a.btn { text-decoration: none; color: inherit; }
 .att img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .att.loading img { opacity: .4; }
 .att button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgb(0 0 0 / .65); color: #fff; font-size: 12px; line-height: 20px; padding: 0; cursor: pointer; }
+.dtools { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.dtools .lbl { font-size: 11.5px; color: var(--muted); margin-right: 2px; }
+.dtools button { border: 1px solid var(--line); background: var(--panel-2); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.dtools button:hover { border-color: var(--accent-2); color: var(--accent-2); }
+.dtools button.on { background: var(--accent-soft); border-color: var(--accent-2); color: var(--accent-2); }
+.dtools button.go { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.imgpanel { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; background: var(--panel-2); }
+.imgpanel textarea { width: 100%; min-height: 60px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--panel); }
+.imgpanel .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.imgpanel select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; background: var(--panel); }
+.imggrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 190px; overflow-y: auto; }
+.imggrid button { padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; aspect-ratio: 1; background: var(--panel); }
+.imggrid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.imgpanel .hint { font-size: 11.5px; color: var(--muted); }
 .composer.drop { outline: 2px dashed var(--accent-2); outline-offset: -6px; background: var(--accent-soft); }
 .msg .thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .msg .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
@@ -212,6 +226,26 @@ textarea#prompt { width: 100%; min-height: 84px; max-height: 240px; resize: vert
       <div class="composer">
         <div class="selchip" id="selchip" hidden><span>선택:</span><code id="selText"></code><button id="selClear">해제</button></div>
         <div class="attachments" id="attachments" hidden></div>
+        <div class="dtools" id="dtools">
+          <span class="lbl">디자인</span>
+          <button data-tool="plan" title="만들기 전에 구성·레이아웃·이미지 계획을 세워요 (파일은 안 고침)">🧭 계획</button>
+          <button data-tool="build" class="go" title="방금 세운 계획대로 만들고, 필요한 이미지도 생성해요">▶ 계획대로 만들기</button>
+          <button data-tool="image" id="imgToggle" title="AI로 사이트용 사진 만들기">🖼 이미지</button>
+          <button data-tool="review" title="지금 화면을 캡처해 검토만 해요 (파일은 안 고침)">🔍 검토</button>
+          <button data-tool="polish" title="검토하고 중요한 것부터 고친 뒤 다시 확인해요">✨ 다듬기</button>
+          <button data-tool="mobile" title="390px 휴대폰 화면 넘침·글자·버튼 크기 점검 후 고치기">📱 모바일</button>
+          <button data-tool="copy" title="화면 문구를 배준우 문체로 다듬기">✍️ 문구</button>
+        </div>
+        <div class="imgpanel" id="imgPanel" hidden>
+          <textarea id="imgPrompt" placeholder="어떤 이미지? 예: 아침 빛이 드는 빈 연습실, 나무 의자 하나와 바닥의 대본 (한국어도 돼요)"></textarea>
+          <div class="row">
+            <select id="imgAspect" aria-label="비율"><option value="16:9">16:9 가로(히어로)</option><option value="4:3">4:3 카드</option><option value="1:1">1:1 정사각</option><option value="4:5">4:5 세로(인스타)</option><option value="9:16">9:16 세로 전체</option></select>
+            <label class="hint"><input type="checkbox" id="imgBrand" checked> 아터스 톤 자동</label>
+            <span class="spacer"></span><button class="btn primary" id="imgGo">만들기</button>
+          </div>
+          <div class="hint" id="imgMsg">만든 이미지는 public/images/gen/ 에 저장돼요. 눌러서 고르면 채팅에 넣을 위치를 적을 수 있어요. 키는 설정 › 이미지 생성.</div>
+          <div class="imggrid" id="imgGrid"></div>
+        </div>
         <textarea id="prompt" placeholder="바꾸고 싶은 점을 적어 주세요.&#10;예: 히어로 제목을 더 크게, 버튼 색을 금색으로&#10;이미지는 붙여넣기(⌘V)나 끌어다 놓기로 첨부할 수 있습니다."></textarea>
         <div class="row">
           <button class="btn" id="pick" title="미리보기에서 요소를 클릭해 대상을 고릅니다">요소 선택</button>
@@ -384,12 +418,12 @@ view.addEventListener('load', () => { hoverBox = null; if (picking) setPicking(t
 const log = $('#log');
 function addMsg(kind, html) { const m = document.createElement('div'); m.className = 'msg ' + kind; m.innerHTML = html; log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
 function welcome() {
-  const m = addMsg('ai welcome', `<b>무엇을 바꿀까요?</b>미리보기를 보면서 말로 요청하세요. Claude Code가 이 프로젝트의 파일을 직접 고치고, 저장되는 즉시 오른쪽 화면에 반영됩니다. 특정 부분을 고치려면 <b style="display:inline;font-size:inherit">요소 선택</b>으로 먼저 클릭하세요.<div class="chips"></div>`);
+  const m = addMsg('ai welcome', `<b>무엇을 바꿀까요?</b>미리보기를 보면서 말로 요청하세요. Claude Code가 이 프로젝트의 파일을 직접 고치고, 저장되는 즉시 오른쪽 화면에 반영됩니다. 특정 부분을 고치려면 <b style="display:inline;font-size:inherit">요소 선택</b>으로 먼저 클릭하세요. 아래 <b style="display:inline;font-size:inherit">디자인</b> 버튼으로 계획 → 만들기 → 검토·다듬기를 맡길 수 있고, 🖼 이미지로 사진도 만들 수 있어요.<div class="chips"></div>`);
   ['히어로 섹션 배경을 아이보리로 바꾸고 글자를 남색으로', '코치 페이지를 새로 만들어줘. 배준우 대표 코치 카드와 강사진 3명 자리', '모바일에서 상단 메뉴 글자가 너무 작아. 키워줘', '프로그램 페이지에 입시반·재수반·성인반 가격표 만들어줘']
     .forEach((s) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = s; b.onclick = () => { $('#prompt').value = s; $('#prompt').focus(); }; m.querySelector('.chips').appendChild(b); });
 }
 function toolLabel(name, target) {
-  const verb = { Read: '읽음', Edit: '수정', MultiEdit: '수정', Write: '작성', Glob: '파일 찾기', Grep: '검색' }[name] || name;
+  const verb = { Read: '읽음', Edit: '수정', MultiEdit: '수정', Write: '작성', Glob: '파일 찾기', Grep: '검색', Skill: '스킬', Bash: '실행', TodoWrite: '계획' }[name] || name;
   return `${verb}${target ? ' · ' + target : ''}`;
 }
 /* ── image attachments ── */
@@ -523,12 +557,13 @@ async function poll() {
 async function send(override) {
   const prompt = override ? override.prompt : $('#prompt').value.trim();
   if (attachments.some((a) => a.status === 'loading')) return toast('이미지를 올리는 중입니다. 잠시 뒤 보내 주세요');
-  const atts = override || mode !== 'page' ? [] : attachments.filter((a) => a.status === 'ready');
+  const keep = !!override?.keepCtx;
+  const atts = (override && !keep) || mode !== 'page' ? [] : attachments.filter((a) => a.status === 'ready');
   if (!prompt && !atts.length) return;
-  const sel = override || mode !== 'page' ? null : selection;
+  const sel = (override && !keep) || mode !== 'page' ? null : selection;
   const cj = curJob();
   // 보고 있는 작업이 끝났고 같은 탭(같은 칼럼)이면 그 대화를 이어서, 아니면 새 작업
-  const cont = !override && cj && cj.kind === mode && cj.status !== 'running' && cj.sessionId && (mode !== 'column' || cj.slug === curSlug) ? cj : null;
+  const cont = (!override || keep) && cj && cj.kind === mode && cj.status !== 'running' && cj.sessionId && (mode !== 'column' || cj.slug === curSlug) ? cj : null;
   const label = (override?.label || prompt || '첨부한 이미지를 보고 알맞게 반영해줘.') + (sel ? `\n◎ ${sel.source || sel.tag}${sel.text ? ' — “' + sel.text.slice(0, 50) + '”' : ''}` : '') + (atts.length ? `\n🖼 이미지 ${atts.length}장` : '');
   const body = {
     kind: mode, prompt, label, title: override?.title || (cont ? cont.title : prompt),
@@ -539,11 +574,48 @@ async function send(override) {
   const r = await fetch('/__studio/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const j = await r.json();
   if (!r.ok) return toast(j.error || '보내지 못했습니다');
-  if (!override) { $('#prompt').value = ''; selection = null; $('#selchip').hidden = true; attachments = []; renderAttachments(); }
+  if (!override || keep) { $('#prompt').value = ''; selection = null; $('#selchip').hidden = true; attachments = []; renderAttachments(); }
   jobs.unshift({ id: j.id, kind: mode, title: String(body.title).slice(0, 60), status: 'running', startedAt: Date.now(), slug: body.slug, agents: 0 });
   seenRunning.add(j.id); runningCount++;
   await openJob(j.id, { append: !!cont });
 }
+/* ── 디자인 도구 (스킬: site-design-plan · site-image · site-review · site-copy) ── */
+function curRoute() { return ($('#route').value || '/').trim() || '/'; }
+const TOOL = {
+  plan: (t, r) => ({ label: `🧭 디자인 계획${t ? ' — ' + t : ''}`, prompt: `[디자인 계획] site-design-plan 스킬로 계획만 세워 주세요. 파일은 고치지 마세요(캡처는 해도 됨).\n현재 미리보기 화면: ${r}\n요청: ${t || '이 화면을 아터스답게 더 좋게 만들기'}` }),
+  build: (t) => ({ label: `▶ 계획대로 만들기${t ? ' — ' + t : ''}`, prompt: `좋아요, 위 계획대로 만들어 주세요. 필요한 이미지는 site-image 스킬로 만들어 넣고(키가 없으면 SVG 그래픽), 끝나면 shot.mjs로 데스크톱·모바일을 캡처해 직접 보고 어긋난 곳을 고쳐 주세요.${t ? '\n추가 요청: ' + t : ''}` }),
+  review: (t, r) => ({ label: `🔍 디자인 검토 ${r}`, prompt: `[디자인 검토] site-review 스킬로 ${r} 화면을 데스크톱(1440)·모바일(390)로 캡처해 검토만 해 주세요. 파일은 고치지 마세요.${t ? '\n특히 볼 점: ' + t : ''}` }),
+  polish: (t, r) => ({ label: `✨ 다듬기 ${r}`, prompt: `[다듬기] site-review 스킬로 ${r} 화면을 캡처해 검토하고, 중요한 것부터 5개까지 고친 뒤 다시 캡처해 확인해 주세요.${t ? '\n특히: ' + t : ''}` }),
+  mobile: (t, r) => ({ label: `📱 모바일 점검 ${r}`, prompt: `[모바일 점검] node tools/studio/shot.mjs ${r} 390 으로 휴대폰 화면을 캡처해 직접 보고, 가로 넘침·15px 미만 글자·44px 미만 버튼·어색한 줄바꿈을 고친 뒤 다시 캡처해 확인해 주세요. 데스크톱 화면은 바뀌지 않게.${t ? '\n특히: ' + t : ''}` }),
+  copy: (t, r) => ({ label: `✍️ 문구 다듬기 ${r}`, prompt: `[문구 다듬기] site-copy 스킬로 ${r} 화면의 제목·버튼·안내 문구를 content/style/voice.md에 맞게 다듬어 주세요. 사실(수치·실적·가격)은 지어내지 말고 확인 필요로 남겨 주세요.${t ? '\n특히: ' + t : ''}` }),
+};
+document.querySelectorAll('#dtools button[data-tool]').forEach((b) => (b.onclick = () => {
+  const k = b.dataset.tool;
+  if (k === 'image') { const p = $('#imgPanel'); p.hidden = !p.hidden; b.classList.toggle('on', !p.hidden); if (!p.hidden) { loadImages(); $('#imgPrompt').focus(); } return; }
+  const t = $('#prompt').value.trim();
+  if (k === 'build') { const cj = curJob(); if (!cj || cj.kind !== 'page' || !cj.sessionId) return toast('먼저 🧭 계획을 세우거나, 이어서 만들 대화를 고르세요'); if (cj.status === 'running') return toast('계획이 끝난 뒤에 눌러 주세요'); }
+  const o = TOOL[k](t, curRoute());
+  send({ ...o, title: o.label, keepCtx: true });
+}));
+async function loadImages() {
+  try {
+    const { images } = await (await fetch('/__studio/api/images')).json();
+    $('#imgGrid').innerHTML = images.map((x) => `<button title="${esc(x.prompt)}" data-url="${esc(x.url)}"><img src="${esc(x.url)}" alt="" loading="lazy"></button>`).join('');
+    document.querySelectorAll('#imgGrid button').forEach((b) => (b.onclick = () => {
+      const pr = $('#prompt'); pr.value = (pr.value ? pr.value + '\n' : '') + `이미지 ${b.dataset.url} 를 `; pr.focus(); toast('어디에 넣을지 이어서 적고 보내세요');
+    }));
+  } catch {}
+}
+$('#imgGo').onclick = async () => {
+  const prompt = $('#imgPrompt').value.trim(); if (!prompt) return toast('어떤 이미지인지 적어 주세요');
+  $('#imgGo').disabled = true; $('#imgGo').textContent = '만드는 중… (10–40초)'; $('#imgMsg').textContent = '';
+  try {
+    const r = await fetch('/__studio/api/images', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, aspect: $('#imgAspect').value, brand: $('#imgBrand').checked }) });
+    const j = await r.json(); if (!r.ok) throw new Error(j.error);
+    $('#imgMsg').textContent = `만들었어요: ${j.url} — 아래에서 눌러 채팅에 넣으세요.`; $('#imgPrompt').value = ''; loadImages();
+  } catch (e) { $('#imgMsg').textContent = e.message; }
+  $('#imgGo').disabled = false; $('#imgGo').textContent = '만들기';
+};
 $('#send').onclick = () => send();
 $('#stop').onclick = async () => { if (viewJob) await fetch(`/__studio/api/jobs/${viewJob}/stop`, { method: 'POST' }).catch(() => {}); };
 $('#prompt').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } });
@@ -564,6 +636,7 @@ function welcomeColumn() {
 function setMode(m, { keepLog = false } = {}) {
   mode = m;
   document.querySelectorAll('#modes button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  $('#dtools').hidden = m !== 'page'; if (m !== 'page') $('#imgPanel').hidden = true;
   $('#colpanel').hidden = m !== 'column'; $('#routeBox').hidden = m === 'column'; $('#pick').hidden = m !== 'page'; $('#attachBtn').hidden = m !== 'page';
   if (picking) setPicking(false);
   $('#prompt').placeholder = m === 'manager' ? '큰 요청을 적어 주세요. 매니저가 나눠서 맡깁니다.\n예: 이번 주 칼럼 2편 기획하고 초안까지 써줘' : m === 'column' ? '고른 칼럼에 대한 요청을 적어 주세요.\n예: 예시 장면을 오디션 상황으로 바꿔줘' : '바꾸고 싶은 점을 적어 주세요.\n예: 히어로 제목을 더 크게, 버튼 색을 금색으로\n이미지는 붙여넣기(⌘V)나 끌어다 놓기로 첨부할 수 있습니다.';

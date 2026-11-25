@@ -20,7 +20,7 @@ import { JobManager, type JobKind } from './jobs';
 import { createAdmin, rememberAiDrafts, addStyleSample } from './admin';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -30,18 +30,21 @@ You are working inside "아터스 스튜디오 (artheus Studio)", a visual vibe-
 Project: Vite + React 18 + TypeScript + Tailwind CSS v4 (utility classes), react-router HashRouter, motion/react, lucide-react.
 Main files: src/app/App.tsx (routes and the PAGES table), src/app/pages/*.tsx, src/app/components/*.tsx, src/styles/*.css.
 The user sees a live preview that hot-reloads as you edit files, so:
-- Edit files directly. Do not run the dev server, builds, installs or git.
+- Edit files directly. Do not run the dev server, builds, installs or git (only the two studio scripts above are allowed).
 - Never modify anything under studio/.
 - Keep the existing design language (ivory #F3F0EA, deep blue #153956, ink #132B3F, keep-ko class for Korean line breaks) unless asked to change it.
 - When the user selected an element, its source location is given; change that place first.
-- For UI/layout/visual work, use the frontend-design skill, but CLAUDE.md design rules (colors, keep-ko, rounded-2xl, mobile 390px) always win.
+- Design skills in .claude/skills: site-design-plan (plan before building), site-image (generate images with \`node tools/studio/gen-image.mjs\`), site-review (capture with \`node tools/studio/shot.mjs <route> 1440,390\` and Read the png to SEE your result), site-copy (UI text in voice.md). Also the frontend-design skill if installed. CLAUDE.md design rules and tools/studio/brand-visual.md always win.
+- For any visible change bigger than a word or color, capture the page after editing (shot.mjs), Read the screenshots, and fix horizontal overflow or obvious layout breaks before you finish.
 - Follow security-guidance warnings: no secrets in code, no dangerouslySetInnerHTML with user input, no personal data in src/ or public/.
 - Reply in Korean, briefly: what you changed and in which files. No long explanations.
 `.trim();
 
 const NESTED_MSG = '스튜디오가 Claude Code 안에서 실행되고 있어 Claude를 부를 수 없습니다.\n\n해결: Claude Code 창에서 Ctrl+C로 개발 서버를 끄고, 새 터미널 창을 열어 프로젝트 폴더에서 npm run dev 를 다시 실행한 뒤 이 화면을 새로고침하세요.';
 
-const ALLOWED_TOOLS = ['Read', 'Edit', 'MultiEdit', 'Write', 'Glob', 'Grep', 'Skill'];
+/* 디자인 도구: 이미지 생성(tools/studio/gen-image.mjs) · 화면 캡처(tools/studio/shot.mjs) — 스킬 site-design-plan · site-image · site-review · site-copy */
+const DESIGN_TOOLS = ['Bash(node tools/studio/gen-image.mjs:*)', 'Bash(node tools/studio/shot.mjs:*)'];
+const ALLOWED_TOOLS = ['Read', 'Edit', 'MultiEdit', 'Write', 'Glob', 'Grep', 'Skill', 'TodoWrite', ...DESIGN_TOOLS];
 
 /* 칼럼 작업용: 웹 조사 + 칼럼 스크립트만 추가로 허용 (git·배포는 버튼으로만) */
 const PY = process.platform === 'win32' ? 'python' : 'python3';
@@ -63,7 +66,7 @@ You are in the COLUMN tab of "아터스 스튜디오". Columns are SEO/GEO artic
 `.trim();
 
 /* 매니저: 큰 요청을 쪼개 서브에이전트에게 맡김 (다른 작업과 동시에 돌지 않는 대신, 안에서 병렬) */
-const MANAGER_TOOLS = [...COLUMN_TOOLS, 'Bash(npm run build)', 'Bash(npm run type-check)'];
+const MANAGER_TOOLS = [...COLUMN_TOOLS, ...DESIGN_TOOLS, 'Bash(npm run build)', 'Bash(npm run type-check)'];
 const MANAGER_NOTE = `
 You are "아터스 매니저", the admin agent of 아터스 스튜디오 for the ARTHEUS acting-academy website (c-art.co.kr).
 You coordinate work and delegate to subagents with the Task tool. Available subagents (.claude/agents):
@@ -229,6 +232,7 @@ export function artheusStudio(): Plugin {
       const root = s.config.root;
       let maxJobs = 3;
       try { maxJobs = JSON.parse(fs.readFileSync(path.join(root, 'content', 'geo-seo.config.json'), 'utf8')).studio?.max_jobs || 3; } catch {}
+      s.httpServer?.once('listening', () => { const a: any = s.httpServer?.address(); if (a?.port) process.env.STUDIO_ORIGIN = `http://localhost:${a.port}`; });
       const jm = new JobManager(root, s.config.logger, maxJobs);
       s.httpServer?.once('close', () => jm.stopAll());
       const admin = createAdmin(root, here, jm);
@@ -345,6 +349,18 @@ export function artheusStudio(): Plugin {
           return json(res, r.ok ? 200 : 500, r.ok ? { ok: true, out: r.out } : { error: r.out.slice(-500) });
         }
 
+        /* ── 이미지 생성 (디자인 도구) ── */
+        if (url === '/__studio/api/images' && req.method === 'GET') {
+          let list: any[] = []; try { list = JSON.parse(fs.readFileSync(path.join(root, '.studio', 'images.json'), 'utf8')); } catch {}
+          return json(res, 200, { images: list.filter((x) => fs.existsSync(path.join(root, x.path))).slice(0, 60) });
+        }
+        if (url === '/__studio/api/images' && req.method === 'POST') {
+          const b = await readBody(req);
+          try {
+            const mod = await import(pathToFileURL(path.join(root, 'tools', 'studio', 'gen-image.mjs')).href);
+            return json(res, 200, await mod.generate({ prompt: String(b.prompt || '').slice(0, 2000), aspect: b.aspect, name: b.name, provider: b.provider, brand: b.brand !== false }));
+          } catch (e: any) { return json(res, 400, { error: e.message }); }
+        }
         if (url === '/__studio/api/site/status') {
           if (!runGit(root, ['rev-parse', '--is-inside-work-tree']).ok) return json(res, 400, { error: 'git 저장소가 아닙니다.' });
           const ahead = runGit(root, ['rev-list', '--count', '@{u}..HEAD']);

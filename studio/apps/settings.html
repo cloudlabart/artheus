@@ -30,6 +30,10 @@ const SECTIONS = [
     { k: 'apiKey', label: 'API 키', type: 'password' }, { k: 'channel', label: '채널 (@핸들 또는 UC… 채널 ID)', ph: '@artheus' }] },
   { id: 'instagram', status: 'instagram', title: '인스타그램 (Graph API)', help: '프로페셔널 계정 + 페이스북 페이지 연결 → Meta 개발자 앱에서 장기 토큰(60일) 발급 → instagram_business_account ID.', link: 'https://developers.facebook.com/tools/explorer/', fields: [
     { k: 'accessToken', label: '액세스 토큰', type: 'password' }, { k: 'userId', label: '인스타그램 비즈니스 계정 ID' }] },
+  { id: 'image', status: 'image', title: '이미지 생성 (작업실 디자인 도구)', help: '작업실에서 사이트용 사진을 AI로 만들 때 씁니다. 둘 중 하나만 있으면 돼요. Gemini: Google AI Studio › Get API key. OpenAI: platform.openai.com › API keys (조직 인증 필요할 수 있음). 쓴 만큼 요금이 나가요(장당 수십 원~백 원대).', link: 'https://aistudio.google.com/apikey', fields: [
+    { k: 'provider', label: '기본으로 쓸 곳', type: 'select', options: [['', '키 있는 곳 자동'], ['gemini', 'Google Gemini'], ['openai', 'OpenAI']] },
+    { k: 'geminiKey', label: 'Gemini API 키', type: 'password' }, { k: 'geminiModel', label: 'Gemini 모델 (비우면 기본)', ph: 'gemini-2.5-flash-image' },
+    { k: 'openaiKey', label: 'OpenAI API 키', type: 'password' }, { k: 'openaiModel', label: 'OpenAI 모델 (비우면 기본)', ph: 'gpt-image-1' }] },
   { id: 'naver', status: 'naver', title: '네이버 스마트플레이스', help: '네이버 예약은 공개 API가 없어 예약 파트너센터 엑셀을 가져옵니다. 바로가기 주소만 넣어 두세요.', link: 'https://partner.booking.naver.com', fields: [
     { k: 'placeUrl', label: '스마트플레이스 주소', ph: 'https://new.smartplace.naver.com/bizes/place/…' }, { k: 'bookingUrl', label: '예약 파트너센터 주소', ph: 'https://partner.booking.naver.com/bizes/…' }] },
 ];
@@ -37,7 +41,9 @@ async function load() {
   const { config, status } = await api('/__studio/api/integrations');
   $('#forms').innerHTML = SECTIONS.map((s) => `<form class="card" data-sec="${s.id}"><h2>${esc(s.title)} ${s.status ? (status[s.status] ? '<span class="badge ok">연결됨</span>' : '<span class="badge">미연결</span>') : ''}</h2>
     <div class="help">${esc(s.help)} ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">열기 ↗</a>` : ''}</div>
-    ${s.fields.map((f) => f.type === 'checkbox'
+    ${s.fields.map((f) => f.type === 'select'
+      ? `<label class="f">${esc(f.label)}<select class="in" name="${f.k}">${f.options.map(([v, t]) => `<option value="${v}" ${(config[s.id]?.[f.k] || '') === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`
+      : f.type === 'checkbox'
       ? `<label class="f check"><input type="checkbox" name="${f.k}" ${config[s.id]?.[f.k] ? 'checked' : ''}>${esc(f.label)}</label>`
       : `<label class="f">${esc(f.label)}<input class="in" name="${f.k}" type="${f.type || 'text'}" value="${esc(config[s.id]?.[f.k] || '')}" placeholder="${esc(f.ph || '')}" autocomplete="off"></label>`).join('')}
     <div class="row"><span class="spacer"></span><button class="btn primary">저장</button></div></form>`).join('');

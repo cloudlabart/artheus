@@ -84,7 +84,7 @@ class Store {
   }
 }
 
-const SECRET_KEYS = ['solapi.apiKey', 'solapi.apiSecret', 'youtube.apiKey', 'instagram.accessToken'];
+const SECRET_KEYS = ['solapi.apiKey', 'solapi.apiSecret', 'youtube.apiKey', 'instagram.accessToken', 'image.geminiKey', 'image.openaiKey'];
 function getPath(o: Json, p: string) { return p.split('.').reduce((a, k) => (a ? a[k] : undefined), o); }
 function mask(c: Json) {
   const out = JSON.parse(JSON.stringify(c));
@@ -303,7 +303,7 @@ export function createAdmin(root: string, here: string, jm: JobManager) {
       send(res, 200, { config: mask(c), status: {
         kakao: !!(c.solapi?.apiKey && c.solapi?.apiSecret && c.solapi?.pfId && c.solapi?.from),
         youtube: !!(c.youtube?.apiKey && c.youtube?.channel), instagram: !!(c.instagram?.accessToken && c.instagram?.userId),
-        naver: !!c.naver?.placeUrl,
+        naver: !!c.naver?.placeUrl, image: !!(c.image?.geminiKey || c.image?.openaiKey),
       } }); return true;
     }
     if (url === '/__studio/api/integrations' && m === 'POST') {
