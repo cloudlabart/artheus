@@ -1,7 +1,7 @@
 /**
  * Home — 시안 기반 랜딩 페이지
- * 왼쪽 코트 사진 + 오른쪽 타이포 분할 히어로
- * 캠페인 사진 활용, 코트 라인 애니메이션 유지
+ * 왼쪽 연기스튜디오 비주얼 + 오른쪽 타이포 분할 히어로
+ * 코트 라인 애니메이션 유지
  */
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
@@ -18,12 +18,12 @@ const NAV_CARDS = [
   { num: '05', label: 'Contact', desc: '상담 · 문의', key: 'contact' },
 ] as const;
 
-/* 캠페인 갤러리 사진 */
+/* 스튜디오 갤러리 비주얼 */
 const GALLERY = [
-  { src: '/uploads/20261124-105259-ARTHEUS_sport_08-llmo.png', alt: '테니스공과 운동화 — artheus 캠페인' },
-  { src: '/uploads/20261124-105259-ARTHEUS_sport_10-dtkt.png', alt: '라켓을 든 선수 — artheus 캠페인' },
-  { src: '/uploads/20261124-105219-아르테우스-하늘과-코트의-리듬-g8vm.png', alt: '아터스, 하늘과 코트의 리듬' },
-  { src: '/uploads/20261124-105202-스크린샷-2026-11-24-오전-10-51-58-rpxr.png', alt: 'PATTERN BREAK — 테니스 패턴 콘셉트' },
+  { src: '/images/gen/acting-gallery-1.svg', alt: '아터스 — 무대 위 열린 표현', label: 'OPEN' },
+  { src: '/images/gen/acting-gallery-2.svg', alt: '아터스 — 호흡과 움직임의 리듬', label: 'BREATH' },
+  { src: '/images/gen/acting-gallery-3.svg', alt: '아터스 — 무대 공간과 조명', label: 'SCENE' },
+  { src: '/images/gen/acting-gallery-4.svg', alt: '아터스 — 장면 작업', label: 'SCENE WORK' },
 ];
 
 export function Home() {
@@ -68,38 +68,12 @@ export function Home() {
       </div>
 
 
-      {/* ═══ 섹션 1 — 스플릿 히어로 (시안 5번 기반) ═══ */}
+      {/* ═══ 섹션 1 — 스플릿 히어로 ═══ */}
       <section aria-labelledby="hero-heading" className="relative z-10 min-h-screen flex flex-col">
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-screen">
-          {/* 왼쪽: 코트 사진 */}
-          <motion.div
-            className="relative overflow-hidden min-h-[50vh] lg:min-h-screen"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.2 }}
-          >
-            <img
-              src="/uploads/20261124-105209-아르테우스-테니스-캠페인-콘택트-시트-gsx0.png"
-              alt="아터스 테니스 캠페인 콘택트 시트"
-              className="absolute inset-0 w-full h-full object-cover"
-              draggable={false}
-            />
-            {/* 그라데이션 오버레이 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0A1F33]/80 hidden lg:block" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0A1F33]/60 lg:hidden" />
-            {/* MOVEMENT IS A LANGUAGE 텍스트 */}
-            <motion.p
-              className="absolute bottom-6 left-6 text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-            >
-              Movement is a language
-            </motion.p>
-          </motion.div>
 
-          {/* 오른쪽: 타이포그래피 */}
-          <div className="relative flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-16 lg:py-0">
+          {/* 오른쪽: 타이포그래피 — 모바일에서 먼저 표시 */}
+          <div className="relative flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-16 lg:py-0 order-first lg:order-last">
             {/* 브랜드 타이틀 */}
             <motion.h1
               id="hero-heading"
@@ -146,7 +120,7 @@ export function Home() {
 
             {/* CTA */}
             <motion.div
-              className="mt-8 flex items-center gap-4"
+              className="mt-8 flex flex-wrap items-center gap-3"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1, duration: 0.7 }}
@@ -159,26 +133,54 @@ export function Home() {
                 프로그램 보기
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
+              {/* 모바일에서만 보이는 상담 버튼 */}
+              <div className="lg:hidden">
+                <InstagramConsultButton
+                  location="home_hero_mobile"
+                  label="상담하기"
+                  tone="on-blue"
+                  className="px-7 py-3 !bg-transparent border border-[#A9C5D9]/30 !text-[#A9C5D9] hover:!bg-[#F3F0EA]/10"
+                />
+              </div>
             </motion.div>
 
-            {/* 하단: 심볼 + TRUE PRESENCE */}
-            <motion.div
-              className="mt-auto pt-16 lg:pt-0 lg:absolute lg:bottom-10 lg:right-12 flex flex-col items-end gap-2"
+            {/* 하단 위치 정보 — 데스크톱 전용 하단 앵커 */}
+            <motion.p
+              className="hidden lg:block absolute bottom-8 left-16 text-[11px] tracking-[0.25em] text-[#A9C5D9]/30 uppercase"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1.4, duration: 0.8 }}
+              transition={{ delay: 1.5, duration: 0.8 }}
             >
-              <img
-                src="/uploads/20261124-093657-image-baen.png"
-                alt="ARTHEUS 심볼"
-                className="w-12 h-12 sm:w-16 sm:h-16 object-contain opacity-20"
-                draggable={false}
-              />
-              <p className="text-[9px] font-bold tracking-[0.25em] text-[#A9C5D9]/25 uppercase">
-                True Presence
-              </p>
-            </motion.div>
+              Seoul · Mangwon · Hongdae Studio
+            </motion.p>
           </div>
+
+          {/* 왼쪽: 스튜디오 비주얼 — 모바일에서 나중에 표시 */}
+          <motion.div
+            className="relative overflow-hidden min-h-[40vh] lg:min-h-screen order-last lg:order-first"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.2 }}
+          >
+            <img
+              src="/images/gen/acting-hero.svg"
+              alt="아터스 연기스튜디오 — 무대와 움직임"
+              className="absolute inset-0 w-full h-full object-cover object-top"
+              draggable={false}
+            />
+            {/* 그라데이션 오버레이 */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0A1F33]/80 hidden lg:block" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0A1F33]/60 lg:hidden" />
+            {/* MOVEMENT IS A LANGUAGE 텍스트 */}
+            <motion.p
+              className="absolute bottom-6 left-6 text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5 }}
+            >
+              Movement is a language
+            </motion.p>
+          </motion.div>
         </div>
 
         {/* 하단 네비 카드 */}
@@ -189,11 +191,11 @@ export function Home() {
           transition={{ delay: 1.2, duration: 0.7 }}
         >
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-            {NAV_CARDS.map((card) => (
+            {NAV_CARDS.map((card, idx) => (
               <button
                 key={card.key}
                 onClick={() => go(card.key as any)}
-                className="court-nav-card group text-left"
+                className={`court-nav-card group text-left${idx === NAV_CARDS.length - 1 ? ' col-span-2 sm:col-span-1' : ''}`}
               >
                 <span className="text-[11px] font-bold tracking-[0.15em] text-[#A9C5D9]/40 group-hover:text-[#A9C5D9]/70 transition-colors">
                   {card.num}
@@ -211,12 +213,12 @@ export function Home() {
       </section>
 
 
-      {/* ═══ 섹션 2 — 비전 (파우더 블루 코트 비주얼) ═══ */}
+      {/* ═══ 섹션 2 — 비전 ═══ */}
       <section className="relative z-10 py-28 sm:py-40 px-5 sm:px-8">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ y: 40 }}
+            whileInView={{ y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
@@ -243,14 +245,14 @@ export function Home() {
 
           <motion.div
             className="relative rounded-2xl overflow-hidden"
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ scale: 0.95 }}
+            whileInView={{ scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
             <img
-              src="/uploads/20261124-105231-파우더-블루-코트-생생한-한-점-0os2.png"
-              alt="파우더 블루 코트 위 테니스공 — ARTHEUS"
+              src="/images/gen/acting-vision.svg"
+              alt="아터스 무대 공간 — 진실한 표현의 자리"
               className="w-full aspect-[4/3] object-cover"
               draggable={false}
             />
@@ -271,8 +273,8 @@ export function Home() {
             ].map((item, i) => (
               <motion.div
                 key={item.num}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ y: 24 }}
+                whileInView={{ y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.6 }}
                 className="court-grid-cell"
@@ -287,27 +289,32 @@ export function Home() {
       </section>
 
 
-      {/* ═══ 섹션 4 — 캠페인 갤러리 ═══ */}
+      {/* ═══ 섹션 4 — 스튜디오 갤러리 ═══ */}
       <section className="relative z-10 py-16 sm:py-24 px-5 sm:px-8">
         <div className="max-w-[1200px] mx-auto">
-          <span className="court-label block mb-5">Campaign</span>
+          <span className="court-label block mb-5">Studio</span>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {GALLERY.map((img, i) => (
               <motion.div
                 key={i}
-                className="relative rounded-2xl overflow-hidden group"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                className="relative rounded-2xl overflow-hidden"
+                initial={{ y: 20 }}
+                whileInView={{ y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.6 }}
               >
                 <img
                   src={img.src}
                   alt={img.alt}
-                  className="w-full aspect-[3/4] object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="w-full aspect-[3/4] object-cover"
                   draggable={false}
                 />
-                <div className="absolute inset-0 bg-[#0A1F33]/20 group-hover:bg-transparent transition-colors duration-500" />
+                {/* 하단 레이블 */}
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-2.5 bg-gradient-to-t from-[#0A1F33]/80 to-transparent">
+                  <span className="text-[10px] font-bold tracking-[0.2em] text-[#A9C5D9]/70 uppercase">
+                    {img.label}
+                  </span>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -321,14 +328,14 @@ export function Home() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
             {[
               { num: '2024', label: '설립' },
-              { num: '30+', label: '누적 최종합격' },
-              { num: '5', label: '코치진' },
-              { num: '92%', label: '목표 달성률' },
+              { num: '30+', label: '누적 합격자' },
+              { num: '5명', label: '코치진' },
+              { num: '8명', label: '소수정예 반 운영' },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={{ y: 16 }}
+                whileInView={{ y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.5 }}
                 className="court-grid-cell text-center py-10 sm:py-14"
@@ -336,7 +343,7 @@ export function Home() {
                 <span className="text-[clamp(2rem,5vw,3.5rem)] font-black tracking-[-0.03em] text-[#F3F0EA]">
                   {stat.num}
                 </span>
-                <span className="block mt-2 text-xs sm:text-sm font-medium text-[#A9C5D9]/50 tracking-wide uppercase">
+                <span className="keep-ko block mt-2 text-xs sm:text-sm font-medium text-[#A9C5D9]/50 tracking-wide">
                   {stat.label}
                 </span>
               </motion.div>
@@ -347,20 +354,21 @@ export function Home() {
 
 
       {/* ═══ 섹션 6 — CTA ═══ */}
-      <section className="relative z-10 py-24 sm:py-32 px-5 sm:px-8">
+      <section className="relative z-10 py-24 sm:py-32 px-8 sm:px-14 overflow-hidden">
         <motion.div
           className="max-w-[700px] mx-auto text-center relative"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ y: 20 }}
+          whileInView={{ y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          <div className="absolute -inset-6 sm:-inset-10 border border-[#A9C5D9]/12 pointer-events-none" />
-          <div className="absolute -inset-3 sm:-inset-5 border border-[#A9C5D9]/08 pointer-events-none" />
-          <div className="absolute -top-6 -left-6 sm:-top-10 sm:-left-10 w-4 h-4 sm:w-7 sm:h-7 border-t-[1.5px] border-l-[1.5px] border-[#A9C5D9]/25" />
-          <div className="absolute -top-6 -right-6 sm:-top-10 sm:-right-10 w-4 h-4 sm:w-7 sm:h-7 border-t-[1.5px] border-r-[1.5px] border-[#A9C5D9]/25" />
-          <div className="absolute -bottom-6 -left-6 sm:-bottom-10 sm:-left-10 w-4 h-4 sm:w-7 sm:h-7 border-b-[1.5px] border-l-[1.5px] border-[#A9C5D9]/25" />
-          <div className="absolute -bottom-6 -right-6 sm:-bottom-10 sm:-right-10 w-4 h-4 sm:w-7 sm:h-7 border-b-[1.5px] border-r-[1.5px] border-[#A9C5D9]/25" />
+          {/* 코트 장식선 — 모바일에서 overflow 방지 */}
+          <div className="absolute -inset-4 sm:-inset-8 border border-[#A9C5D9]/12 pointer-events-none" />
+          <div className="absolute -inset-2 sm:-inset-4 border border-[#A9C5D9]/08 pointer-events-none" />
+          <div className="absolute -top-4 -left-4 sm:-top-8 sm:-left-8 w-4 h-4 sm:w-7 sm:h-7 border-t-[1.5px] border-l-[1.5px] border-[#A9C5D9]/25" />
+          <div className="absolute -top-4 -right-4 sm:-top-8 sm:-right-8 w-4 h-4 sm:w-7 sm:h-7 border-t-[1.5px] border-r-[1.5px] border-[#A9C5D9]/25" />
+          <div className="absolute -bottom-4 -left-4 sm:-bottom-8 sm:-left-8 w-4 h-4 sm:w-7 sm:h-7 border-b-[1.5px] border-l-[1.5px] border-[#A9C5D9]/25" />
+          <div className="absolute -bottom-4 -right-4 sm:-bottom-8 sm:-right-8 w-4 h-4 sm:w-7 sm:h-7 border-b-[1.5px] border-r-[1.5px] border-[#A9C5D9]/25" />
 
           <span className="court-label">CONTACT</span>
           <h2 className="keep-ko mt-4 text-2xl sm:text-[34px] font-bold leading-[1.25] tracking-[-0.02em] text-[#F3F0EA]">

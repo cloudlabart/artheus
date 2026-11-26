@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <radialGradient id="g3light" cx="50%" cy="60%" r="40%">
+      <stop offset="0%" stop-color="#A9C5D9" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#091929" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="g3floor" x1="0" y1="0.5" x2="0" y2="1">
+      <stop offset="0%" stop-color="#112B42"/>
+      <stop offset="100%" stop-color="#091929"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="#091929"/>
+
+  <!-- Stage floor -->
+  <polygon points="0,800 600,800 500,480 100,480" fill="url(#g3floor)"/>
+  <rect width="600" height="800" fill="url(#g3light)"/>
+
+  <!-- Wing panels - left and right -->
+  <rect x="0"   y="300" width="90" height="500" fill="#030C15" opacity="0.95"/>
+  <rect x="510" y="300" width="90" height="500" fill="#030C15" opacity="0.95"/>
+
+  <!-- Wing edge highlights -->
+  <line x1="90"  y1="300" x2="90"  y2="800" stroke="#A9C5D9" stroke-width="1.5" opacity="0.25"/>
+  <line x1="510" y1="300" x2="510" y2="800" stroke="#A9C5D9" stroke-width="1.5" opacity="0.25"/>
+
+  <!-- Upstage wall -->
+  <rect x="90" y="300" width="420" height="40" fill="#071420" opacity="0.9"/>
+  <line x1="90" y1="340" x2="510" y2="340" stroke="#A9C5D9" stroke-width="1" opacity="0.2"/>
+
+  <!-- Hanging lights - batten -->
+  <line x1="90"  y1="300" x2="510" y2="300" stroke="#A9C5D9" stroke-width="2" opacity="0.3"/>
+  <!-- Individual lights -->
+  <g opacity="0.6">
+    <line x1="150" y1="300" x2="150" y2="330" stroke="#A9C5D9" stroke-width="1" opacity="0.4"/>
+    <ellipse cx="150" cy="334" rx="10" ry="6" fill="#2D5E88" opacity="0.8"/>
+    <line x1="230" y1="300" x2="230" y2="330" stroke="#A9C5D9" stroke-width="1" opacity="0.4"/>
+    <ellipse cx="230" cy="334" rx="10" ry="6" fill="#2D5E88" opacity="0.8"/>
+    <line x1="300" y1="300" x2="300" y2="325" stroke="#A9C5D9" stroke-width="1.5" opacity="0.6"/>
+    <ellipse cx="300" cy="329" rx="12" ry="7" fill="#A9C5D9" opacity="0.9"/>
+    <line x1="370" y1="300" x2="370" y2="330" stroke="#A9C5D9" stroke-width="1" opacity="0.4"/>
+    <ellipse cx="370" cy="334" rx="10" ry="6" fill="#2D5E88" opacity="0.8"/>
+    <line x1="450" y1="300" x2="450" y2="330" stroke="#A9C5D9" stroke-width="1" opacity="0.4"/>
+    <ellipse cx="450" cy="334" rx="10" ry="6" fill="#2D5E88" opacity="0.8"/>
+  </g>
+
+  <!-- Center spotlight pool on stage -->
+  <ellipse cx="300" cy="490" rx="80" ry="25" fill="#C8DDE8" opacity="0.2"/>
+  <ellipse cx="300" cy="490" rx="130" ry="40" fill="#A9C5D9" opacity="0.08"/>
+
+  <!-- Stage floor perspective lines -->
+  <g stroke="#A9C5D9" stroke-width="1" opacity="0.1">
+    <line x1="300" y1="480" x2="0"   y2="800"/>
+    <line x1="300" y1="480" x2="150" y2="800"/>
+    <line x1="300" y1="480" x2="300" y2="800"/>
+    <line x1="300" y1="480" x2="450" y2="800"/>
+    <line x1="300" y1="480" x2="600" y2="800"/>
+    <line x1="100" y1="560" x2="500" y2="560"/>
+    <line x1="60"  y1="640" x2="540" y2="640"/>
+    <line x1="20"  y1="720" x2="580" y2="720"/>
+  </g>
+
+  <!-- Stage X mark (center) -->
+  <line x1="291" y1="481" x2="309" y2="499" stroke="#A9C5D9" stroke-width="2" opacity="0.5"/>
+  <line x1="309" y1="481" x2="291" y2="499" stroke="#A9C5D9" stroke-width="2" opacity="0.5"/>
+
+  <!-- Label -->
+  <text x="22" y="775" fill="#A9C5D9" font-size="18" opacity="0.35" font-family="monospace" letter-spacing="2">03</text>
+  <text x="300" y="745" text-anchor="middle" fill="#A9C5D9" font-size="11" opacity="0.25" font-family="monospace" letter-spacing="5">SCENE</text>
+</svg>

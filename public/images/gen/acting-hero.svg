@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200">
+  <defs>
+    <radialGradient id="sg1" cx="75%" cy="30%" r="50%">
+      <stop offset="0%" stop-color="#A9C5D9" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#091929" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sg2" cx="30%" cy="70%" r="50%">
+      <stop offset="0%" stop-color="#2D5E88" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#091929" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sg3" cx="50%" cy="40%" r="45%">
+      <stop offset="0%" stop-color="#A9C5D9" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#091929" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#112236"/>
+      <stop offset="100%" stop-color="#0A1A28"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base background -->
+  <rect width="1200" height="1200" fill="#091929"/>
+
+  <!-- ── PANEL 01: Stage floor perspective (top-left) ── -->
+  <rect x="0" y="0" width="598" height="598" fill="#0A1E2F"/>
+  <!-- Vanishing point perspective lines -->
+  <g stroke="#A9C5D9" stroke-width="1" opacity="0.2">
+    <line x1="299" y1="240" x2="0"   y2="598"/>
+    <line x1="299" y1="240" x2="100" y2="598"/>
+    <line x1="299" y1="240" x2="200" y2="598"/>
+    <line x1="299" y1="240" x2="299" y2="598"/>
+    <line x1="299" y1="240" x2="400" y2="598"/>
+    <line x1="299" y1="240" x2="500" y2="598"/>
+    <line x1="299" y1="240" x2="598" y2="598"/>
+  </g>
+  <!-- Horizontal stage lines -->
+  <g stroke="#A9C5D9" stroke-width="1" opacity="0.15">
+    <line x1="0" y1="380" x2="598" y2="380"/>
+    <line x1="0" y1="430" x2="598" y2="430"/>
+    <line x1="0" y1="480" x2="598" y2="480"/>
+    <line x1="0" y1="530" x2="598" y2="530"/>
+    <line x1="0" y1="580" x2="598" y2="580"/>
+  </g>
+  <!-- Center mark -->
+  <circle cx="299" cy="240" r="5" fill="#A9C5D9" opacity="0.5"/>
+  <circle cx="299" cy="240" r="25" fill="none" stroke="#A9C5D9" stroke-width="1" opacity="0.15"/>
+  <circle cx="299" cy="240" r="55" fill="none" stroke="#A9C5D9" stroke-width="1" opacity="0.07"/>
+  <!-- Stage edge line -->
+  <line x1="0" y1="380" x2="598" y2="380" stroke="#A9C5D9" stroke-width="2" opacity="0.3"/>
+  <text x="20" y="575" fill="#A9C5D9" font-size="20" opacity="0.35" font-family="monospace" letter-spacing="2">01</text>
+
+  <!-- ── PANEL 02: Spotlight beam (top-right) ── -->
+  <rect x="602" y="0" width="598" height="598" fill="#081625"/>
+  <rect x="602" y="0" width="598" height="598" fill="url(#sg1)"/>
+  <!-- Spotlight cone -->
+  <polygon points="901,0 858,320 944,320" fill="#C8DDE8" opacity="0.07"/>
+  <polygon points="901,0 840,340 962,340" fill="#C8DDE8" opacity="0.04"/>
+  <!-- Spotlight pool on floor -->
+  <ellipse cx="901" cy="338" rx="55" ry="22" fill="#D0E4F0" opacity="0.2"/>
+  <ellipse cx="901" cy="338" rx="90" ry="35" fill="#A9C5D9" opacity="0.08"/>
+  <ellipse cx="901" cy="338" rx="140" ry="55" fill="#A9C5D9" opacity="0.04"/>
+  <!-- Light fixture lines -->
+  <line x1="870" y1="0" x2="870" y2="40" stroke="#A9C5D9" stroke-width="1" opacity="0.3"/>
+  <line x1="932" y1="0" x2="932" y2="40" stroke="#A9C5D9" stroke-width="1" opacity="0.3"/>
+  <text x="622" y="575" fill="#A9C5D9" font-size="20" opacity="0.35" font-family="monospace" letter-spacing="2">02</text>
+
+  <!-- ── PANEL 03: Movement silhouette (bottom-left) ── -->
+  <rect x="0" y="602" width="598" height="598" fill="#0E2235"/>
+  <rect x="0" y="602" width="598" height="598" fill="url(#sg2)"/>
+  <!-- Movement arc lines -->
+  <g fill="none" stroke="#A9C5D9" stroke-linecap="round">
+    <path d="M 60 1130 Q 150 1020 299 970 Q 448 920 538 1030" stroke-width="1.5" opacity="0.25"/>
+    <path d="M 60 1100 Q 160 980 299 940 Q 440 900 540 1000" stroke-width="1" opacity="0.15"/>
+    <path d="M 60 1160 Q 155 1060 299 1010 Q 445 960 540 1060" stroke-width="1" opacity="0.1"/>
+  </g>
+  <!-- Human silhouette — reaching upward -->
+  <g fill="#C8DDE8" opacity="0.55">
+    <!-- Head -->
+    <ellipse cx="299" cy="755" rx="26" ry="28"/>
+    <!-- Torso -->
+    <path d="M 282 783 L 272 870 L 290 870 L 299 848 L 308 870 L 326 870 L 316 783 Z"/>
+    <!-- Left arm raised -->
+    <path d="M 285 800 Q 230 758 190 710" stroke="#C8DDE8" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Right arm raised -->
+    <path d="M 313 800 Q 368 758 408 710" stroke="#C8DDE8" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- Legs -->
+    <path d="M 290 870 L 274 950" stroke="#C8DDE8" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M 308 870 L 324 950" stroke="#C8DDE8" stroke-width="10" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- Spotlight on figure -->
+  <ellipse cx="299" cy="860" rx="70" ry="20" fill="#A9C5D9" opacity="0.08"/>
+  <text x="20" y="1177" fill="#A9C5D9" font-size="20" opacity="0.35" font-family="monospace" letter-spacing="2">03</text>
+
+  <!-- ── PANEL 04: Typography / True Presence (bottom-right) ── -->
+  <rect x="602" y="602" width="598" height="598" fill="#0C1D2D"/>
+  <rect x="602" y="602" width="598" height="598" fill="url(#sg3)"/>
+  <!-- Decorative corner marks -->
+  <rect x="630" y="630" width="40" height="2" fill="#A9C5D9" opacity="0.3"/>
+  <rect x="630" y="630" width="2" height="40" fill="#A9C5D9" opacity="0.3"/>
+  <rect x="1170" y="630" width="-40" height="2" fill="#A9C5D9" opacity="0.3"/>
+  <rect x="1170" y="630" width="-2" height="40" fill="#A9C5D9" opacity="0.3"/>
+  <!-- Main text -->
+  <text x="901" y="870" text-anchor="middle" fill="#F3F0EA" font-size="58" font-family="Arial, sans-serif" font-weight="900" opacity="0.9" letter-spacing="-2">True</text>
+  <text x="901" y="934" text-anchor="middle" fill="#A9C5D9" font-size="58" font-family="Arial, sans-serif" font-weight="900" opacity="0.65" letter-spacing="-2">Presence</text>
+  <line x1="740" y1="952" x2="1062" y2="952" stroke="#A9C5D9" stroke-width="1" opacity="0.2"/>
+  <text x="901" y="978" text-anchor="middle" fill="#A9C5D9" font-size="13" opacity="0.3" font-family="monospace" letter-spacing="6">ARTHEUS</text>
+  <text x="622" y="1177" fill="#A9C5D9" font-size="20" opacity="0.35" font-family="monospace" letter-spacing="2">04</text>
+
+  <!-- ── Divider lines ── -->
+  <line x1="600" y1="0"    x2="600" y2="1200" stroke="#153956" stroke-width="4"/>
+  <line x1="0"   y1="600"  x2="1200" y2="600" stroke="#153956" stroke-width="4"/>
+</svg>

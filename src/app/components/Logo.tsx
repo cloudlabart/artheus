@@ -22,16 +22,16 @@ export function Logo({ className = '', variant = 'full', size = 'md' }: LogoProp
   }
 
   if (variant === 'symbol') {
-    const imgSize = { sm: 'h-6', md: 'h-8', lg: 'h-10' }[size];
+    const imgSize = { sm: 'h-6', md: 'h-9', lg: 'h-11' }[size];
     return (
-      <div className={`flex items-center gap-2.5 ${className}`}>
+      <div className={`flex items-center gap-3 ${className}`}>
         <img
           src="/uploads/20261124-093657-image-baen.png"
           alt="ARTHEUS 심볼"
           className={`${imgSize} w-auto`}
           draggable={false}
         />
-        <span className="text-[#F3F0EA] font-black tracking-[0.08em] text-sm">
+        <span className="text-[#F3F0EA] font-black tracking-[0.1em] text-base">
           artheus
         </span>
       </div>

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900">
+  <defs>
+    <radialGradient id="centerlight" cx="50%" cy="55%" r="40%">
+      <stop offset="0%" stop-color="#A9C5D9" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#2D5E88" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#091929" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="floorshine" cx="50%" cy="80%" r="35%">
+      <stop offset="0%" stop-color="#A9C5D9" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0A1F33" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="topfade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#040E18"/>
+      <stop offset="40%" stop-color="#0A1F33"/>
+      <stop offset="100%" stop-color="#112B42"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background gradient -->
+  <rect width="1200" height="900" fill="url(#topfade)"/>
+
+  <!-- Floor plane (perspective) -->
+  <polygon points="0,900 1200,900 900,520 300,520" fill="#0E2A3F" opacity="0.9"/>
+  <polygon points="0,900 1200,900 900,520 300,520" fill="url(#floorshine)"/>
+
+  <!-- Floor board lines converging to VP -->
+  <g stroke="#A9C5D9" stroke-width="1" opacity="0.12">
+    <!-- Horizontal boards -->
+    <line x1="200" y1="600" x2="1000" y2="600"/>
+    <line x1="100" y1="660" x2="1100" y2="660"/>
+    <line x1="0"   y1="720" x2="1200" y2="720"/>
+    <line x1="0"   y1="790" x2="1200" y2="790"/>
+    <line x1="0"   y1="860" x2="1200" y2="860"/>
+    <!-- Perspective verticals -->
+    <line x1="600" y1="520" x2="0"    y2="900"/>
+    <line x1="600" y1="520" x2="200"  y2="900"/>
+    <line x1="600" y1="520" x2="400"  y2="900"/>
+    <line x1="600" y1="520" x2="600"  y2="900"/>
+    <line x1="600" y1="520" x2="800"  y2="900"/>
+    <line x1="600" y1="520" x2="1000" y2="900"/>
+    <line x1="600" y1="520" x2="1200" y2="900"/>
+  </g>
+
+  <!-- Stage edge line -->
+  <line x1="300" y1="520" x2="900" y2="520" stroke="#A9C5D9" stroke-width="2" opacity="0.4"/>
+
+  <!-- Spotlight cone from above -->
+  <polygon points="600,0 530,520 670,520" fill="#C8DDE8" opacity="0.06"/>
+  <polygon points="600,0 500,520 700,520" fill="#B8D0E0" opacity="0.03"/>
+
+  <!-- Stage ambient glow -->
+  <rect width="1200" height="900" fill="url(#centerlight)"/>
+
+  <!-- Spotlight pool on stage -->
+  <ellipse cx="600" cy="520" rx="80" ry="22" fill="#D8EAF5" opacity="0.3"/>
+  <ellipse cx="600" cy="520" rx="130" ry="38" fill="#A9C5D9" opacity="0.12"/>
+  <ellipse cx="600" cy="520" rx="200" ry="60" fill="#A9C5D9" opacity="0.05"/>
+
+  <!-- Stage wings — vertical dark panels -->
+  <rect x="0"    y="420" width="260" height="480" fill="#040E18" opacity="0.85"/>
+  <rect x="940"  y="420" width="260" height="480" fill="#040E18" opacity="0.85"/>
+
+  <!-- Wing edges (slight light catch) -->
+  <line x1="260" y1="420" x2="260" y2="900" stroke="#A9C5D9" stroke-width="1" opacity="0.2"/>
+  <line x1="940" y1="420" x2="940" y2="900" stroke="#A9C5D9" stroke-width="1" opacity="0.2"/>
+
+  <!-- Hanging lights (batten) -->
+  <g opacity="0.5">
+    <line x1="300" y1="0" x2="300" y2="80" stroke="#A9C5D9" stroke-width="1" opacity="0.2"/>
+    <line x1="600" y1="0" x2="600" y2="60" stroke="#A9C5D9" stroke-width="1.5" opacity="0.4"/>
+    <line x1="900" y1="0" x2="900" y2="80" stroke="#A9C5D9" stroke-width="1" opacity="0.2"/>
+    <rect x="285" y="78"  width="30" height="12" rx="3" fill="#2D5E88" opacity="0.5"/>
+    <rect x="585" y="58"  width="30" height="12" rx="3" fill="#A9C5D9" opacity="0.7"/>
+    <rect x="885" y="78"  width="30" height="12" rx="3" fill="#2D5E88" opacity="0.5"/>
+  </g>
+
+  <!-- Center stage mark (X on floor) -->
+  <line x1="590" y1="510" x2="610" y2="530" stroke="#A9C5D9" stroke-width="2" opacity="0.6"/>
+  <line x1="610" y1="510" x2="590" y2="530" stroke="#A9C5D9" stroke-width="2" opacity="0.6"/>
+
+  <!-- Label -->
+  <text x="30" y="880" fill="#A9C5D9" font-size="13" opacity="0.3" font-family="monospace" letter-spacing="4">ARTHEUS ACTING STUDIO</text>
+</svg>

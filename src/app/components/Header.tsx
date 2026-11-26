@@ -108,7 +108,7 @@ export function Header() {
                 return (
                   <button key={item.to}
                     onClick={() => go(pageKey as any)}
-                    className={"text-sm font-medium transition-colors relative pb-0.5 " + (isActive ? 'text-[#A9C5D9]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
+                    className={"text-[15px] font-medium transition-colors relative pb-0.5 " + (isActive ? 'text-[#A9C5D9]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
                     {item.label}
                     {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#A9C5D9] rounded-full" />}
                   </button>
@@ -118,7 +118,7 @@ export function Header() {
               if (item.label === 'artheus ON') {
                 return (
                   <Link key={item.to} to={item.to}
-                    className="text-sm font-black italic transition-colors hover:opacity-80"
+                    className="text-[15px] font-black italic transition-colors hover:opacity-80"
                     style={{ fontFamily: "'Syne', 'DM Sans', sans-serif", color: '#F3F0EA', letterSpacing: '-0.02em' }}>
                     artheus ON
                   </Link>
@@ -126,7 +126,7 @@ export function Header() {
               }
               return (
                 <Link key={item.to} to={item.to}
-                  className={"text-sm font-medium transition-colors " + (item.highlight ? 'text-[#A9C5D9] hover:text-[#F3F0EA]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
+                  className={"text-[15px] font-medium transition-colors " + (item.highlight ? 'text-[#A9C5D9] hover:text-[#F3F0EA]' : 'text-[#C8D9E8] hover:text-[#F3F0EA]')}>
                   {item.label}
                 </Link>
               );
