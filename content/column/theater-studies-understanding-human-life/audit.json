@@ -1,0 +1,299 @@
+{
+  "file": "content/column/theater-studies-understanding-human-life/article.md",
+  "score": 98,
+  "threshold": 80,
+  "passed": true,
+  "stats": {
+    "chars": 3289,
+    "h2": 8,
+    "lists": 4,
+    "tables": 1,
+    "faq": 5,
+    "external_links": 15,
+    "statistics": 6
+  },
+  "failures": [
+    {
+      "id": "seo.images",
+      "pass": false,
+      "weight": 2,
+      "severity": "normal",
+      "message": "이미지 0개",
+      "fix": "대표 이미지/도식 추가 (네이버는 이미지 수가 체류에 영향)."
+    }
+  ],
+  "checks": [
+    {
+      "id": "meta.title",
+      "pass": true,
+      "weight": 6,
+      "severity": "critical",
+      "message": "제목 길이 28자 (권장 15–45자, 구글 SERP 잘림·네이버 노출 기준)",
+      "fix": ""
+    },
+    {
+      "id": "meta.title_kw",
+      "pass": true,
+      "weight": 6,
+      "severity": "critical",
+      "message": "제목에 주 키워드('연극학과') 포함",
+      "fix": ""
+    },
+    {
+      "id": "meta.description",
+      "pass": true,
+      "weight": 4,
+      "severity": "normal",
+      "message": "메타 설명 100자 (권장 70–160자)",
+      "fix": ""
+    },
+    {
+      "id": "meta.desc_kw",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "메타 설명에 주 키워드 포함",
+      "fix": ""
+    },
+    {
+      "id": "meta.slug",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "슬러그 'theater-studies-understanding-human-life' (영문 소문자·하이픈, 60자 이하)",
+      "fix": ""
+    },
+    {
+      "id": "meta.dates",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "작성일(date)/수정일(updated) 명시 — AI 검색은 최신성 신호를 중시",
+      "fix": ""
+    },
+    {
+      "id": "meta.author",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "저자(author) 명시 — E-E-A-T",
+      "fix": ""
+    },
+    {
+      "id": "struct.h1",
+      "pass": true,
+      "weight": 4,
+      "severity": "critical",
+      "message": "H1 1개 (정확히 1개)",
+      "fix": ""
+    },
+    {
+      "id": "struct.h2",
+      "pass": true,
+      "weight": 4,
+      "severity": "normal",
+      "message": "H2 8개 (4개 이상 권장)",
+      "fix": ""
+    },
+    {
+      "id": "struct.hierarchy",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "제목 계층 건너뛰기 없음 (H2→H4 금지)",
+      "fix": ""
+    },
+    {
+      "id": "geo.question_headings",
+      "pass": true,
+      "weight": 5,
+      "severity": "normal",
+      "message": "질문형/의도형 소제목 11개 (2개 이상) — AI가 질문-답 단위로 인용",
+      "fix": ""
+    },
+    {
+      "id": "geo.summary_box",
+      "pass": true,
+      "weight": 6,
+      "severity": "critical",
+      "message": "도입부(첫 H2 이전)에 핵심 요약/TL;DR 블록",
+      "fix": ""
+    },
+    {
+      "id": "seo.kw_intro",
+      "pass": true,
+      "weight": 4,
+      "severity": "normal",
+      "message": "도입부(첫 H2 이전)에 주 키워드 등장",
+      "fix": ""
+    },
+    {
+      "id": "geo.direct_answer",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "첫 문단 길이 64자 (40–300자, 바로 답하는 문장)",
+      "fix": ""
+    },
+    {
+      "id": "seo.kw_h2",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "H2 중 키워드 포함 1개",
+      "fix": ""
+    },
+    {
+      "id": "seo.secondary_kw",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "보조 키워드 3/7개 사용",
+      "fix": ""
+    },
+    {
+      "id": "seo.length",
+      "pass": true,
+      "weight": 5,
+      "severity": "normal",
+      "message": "본문 3289자 (목표 3500자의 80% 이상)",
+      "fix": ""
+    },
+    {
+      "id": "geo.chunking",
+      "pass": true,
+      "weight": 4,
+      "severity": "normal",
+      "message": "400자 초과 긴 문단 0개 (≤1) — 짧은 문단이 인용·모바일 가독성↑",
+      "fix": ""
+    },
+    {
+      "id": "geo.lists",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "목록 4개 (2개 이상)",
+      "fix": ""
+    },
+    {
+      "id": "geo.table",
+      "pass": true,
+      "weight": 4,
+      "severity": "normal",
+      "message": "표 1개 (비교/스펙 표 1개 이상) — AI Overview·스마트블록 추출에 유리",
+      "fix": ""
+    },
+    {
+      "id": "geo.definition",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "핵심 개념의 정의 문장('X란 ~입니다') 존재",
+      "fix": ""
+    },
+    {
+      "id": "geo.statistics",
+      "pass": true,
+      "weight": 5,
+      "severity": "normal",
+      "message": "구체 수치/통계 6개 (3개 이상) — 수치는 인용 확률을 높임",
+      "fix": ""
+    },
+    {
+      "id": "geo.citations",
+      "pass": true,
+      "weight": 5,
+      "severity": "critical",
+      "message": "외부 출처 링크 15개 (2개 이상, 공신력 있는 1차 출처)",
+      "fix": ""
+    },
+    {
+      "id": "seo.internal_links",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "내부 링크 1개",
+      "fix": ""
+    },
+    {
+      "id": "seo.images",
+      "pass": false,
+      "weight": 2,
+      "severity": "normal",
+      "message": "이미지 0개",
+      "fix": "대표 이미지/도식 추가 (네이버는 이미지 수가 체류에 영향)."
+    },
+    {
+      "id": "seo.img_alt",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "alt 없는 이미지 0개",
+      "fix": ""
+    },
+    {
+      "id": "geo.faq",
+      "pass": true,
+      "weight": 5,
+      "severity": "normal",
+      "message": "FAQ 5개 (3개 이상, FAQPage 스키마 자동 생성)",
+      "fix": ""
+    },
+    {
+      "id": "geo.faq_in_body",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "본문에 FAQ 섹션 노출 (스키마만 있고 본문에 없으면 안 됨)",
+      "fix": ""
+    },
+    {
+      "id": "geo.freshness",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "최신성 표기(연도 또는 updated)",
+      "fix": ""
+    },
+    {
+      "id": "naver.tags",
+      "pass": true,
+      "weight": 2,
+      "severity": "normal",
+      "message": "네이버 태그 5개 (3–10)",
+      "fix": ""
+    },
+    {
+      "id": "naver.kw_density",
+      "pass": true,
+      "weight": 3,
+      "severity": "normal",
+      "message": "본문 키워드 반복 12회 (3–12회, 과도하면 저품질 판정 위험)",
+      "fix": ""
+    },
+    {
+      "id": "reader.audience",
+      "pass": true,
+      "weight": 3,
+      "severity": "critical",
+      "message": "청중 정의(frontmatter audience 또는 config.editorial.audience)",
+      "fix": ""
+    },
+    {
+      "id": "reader.solution_count",
+      "pass": true,
+      "weight": 5,
+      "severity": "critical",
+      "message": "솔루션·목록은 손에 꼽을 개수(≤5) — 초과: 없음",
+      "fix": ""
+    },
+    {
+      "id": "reader.recommended_books",
+      "pass": true,
+      "weight": 6,
+      "severity": "critical",
+      "message": "'## 추천 도서' 3권, 구매 링크 있는 책 3권 (≥2)",
+      "fix": ""
+    }
+  ]
+}
