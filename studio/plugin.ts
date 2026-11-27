@@ -372,7 +372,26 @@ export function artheusStudio(): Plugin {
         /* ── 이미지 생성 (디자인 도구) ── */
         if (url === '/__studio/api/images' && req.method === 'GET') {
           let list: any[] = []; try { list = JSON.parse(fs.readFileSync(path.join(root, '.studio', 'images.json'), 'utf8')); } catch {}
-          return json(res, 200, { images: list.filter((x) => fs.existsSync(path.join(root, x.path))).slice(0, 60) });
+          let style = ''; try { style = (await import(pathToFileURL(path.join(root, 'tools', 'studio', 'gen-image.mjs')).href)).BRAND_STYLE; } catch {}
+          return json(res, 200, { images: list.filter((x) => fs.existsSync(path.join(root, x.path))).slice(0, 60), style });
+        }
+        // Gemini 앱(구독)에서 만든 이미지를 가져오기 — 키 없이
+        if (url === '/__studio/api/images/import' && req.method === 'POST') {
+          const buf = await readRaw(req, 15 * 1024 * 1024);
+          if (!buf || !buf.length) return json(res, 400, { error: '이미지를 읽지 못했어요(15MB 이하).' });
+          const ext = buf[0] === 0x89 && buf[1] === 0x50 ? 'png' : buf[0] === 0xff && buf[1] === 0xd8 ? 'jpg' : buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP' ? 'webp' : '';
+          if (!ext) return json(res, 400, { error: 'PNG·JPG·WEBP 이미지만 가져올 수 있어요.' });
+          const raw = decodeURIComponent(String(req.headers['x-file-name'] || 'gemini')).replace(/\.[a-z0-9]+$/i, '');
+          const prompt = decodeURIComponent(String(req.headers['x-prompt'] || '')).slice(0, 2000);
+          const slug = (raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)) || 'gemini';
+          const dir = path.join(root, 'public', 'images', 'gen'); fs.mkdirSync(dir, { recursive: true });
+          let base = slug, n = 1; while (['png', 'jpg', 'webp'].some((e) => fs.existsSync(path.join(dir, `${base}.${e}`)))) base = `${slug}-${++n}`;
+          const rel = `public/images/gen/${base}.${ext}`; fs.writeFileSync(path.join(root, rel), buf);
+          const logF = path.join(root, '.studio', 'images.json'); fs.mkdirSync(path.dirname(logF), { recursive: true });
+          let logA: any[] = []; try { logA = JSON.parse(fs.readFileSync(logF, 'utf8')); } catch {}
+          const rec = { path: rel, url: '/' + rel.replace(/^public\//, ''), prompt, provider: 'gemini-app', createdAt: new Date().toISOString(), size: buf.length };
+          logA.unshift(rec); fs.writeFileSync(logF, JSON.stringify(logA.slice(0, 300), null, 2));
+          return json(res, 200, rec);
         }
         if (url === '/__studio/api/images' && req.method === 'POST') {
           const b = await readBody(req);

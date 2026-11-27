@@ -87,6 +87,8 @@ a.btn { text-decoration: none; color: inherit; }
 .imggrid button { padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; cursor: pointer; aspect-ratio: 1; background: var(--panel); }
 .imggrid img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .imgpanel .hint { font-size: 11.5px; color: var(--muted); }
+.imgpanel .gem { border-top: 1px dashed var(--line); padding-top: 8px; }
+.imgpanel .gem .btn { padding: 4px 9px; font-size: 12px; }
 .composer.drop { outline: 2px dashed var(--accent-2); outline-offset: -6px; background: var(--accent-soft); }
 .msg .thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .msg .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
@@ -243,7 +245,11 @@ textarea#prompt { width: 100%; min-height: 84px; max-height: 240px; resize: vert
             <label class="hint"><input type="checkbox" id="imgBrand" checked> 아터스 톤 자동</label>
             <span class="spacer"></span><button class="btn primary" id="imgGo">만들기</button>
           </div>
-          <div class="hint" id="imgMsg">만든 이미지는 public/images/gen/ 에 저장돼요. 눌러서 고르면 채팅에 넣을 위치를 적을 수 있어요. 키는 설정 › 이미지 생성.</div>
+          <div class="row gem"><span class="hint">키 없이 <b>Gemini 앱(내 구글 계정)</b>으로:</span>
+            <button class="btn" id="gemCopy" title="아터스 톤이 붙은 프롬프트를 복사">① 프롬프트 복사</button>
+            <button class="btn" id="gemOpen" title="gemini.google.com 을 새 창으로">② Gemini 열기 ↗</button>
+            <label class="btn" title="Gemini에서 내려받은 이미지를 사이트 이미지 폴더로">③ 가져오기<input type="file" id="gemFile" accept="image/png,image/jpeg,image/webp" multiple hidden></label></div>
+          <div class="hint" id="imgMsg">[만들기]는 설정 › 이미지 생성의 API 키로 바로 만들어요. 키가 없으면 ①→②→③ 순서로 Gemini 앱에서 만들어 가져오세요(이 패널에 끌어다 놓아도 돼요). 이미지를 눌러 고르면 채팅에 넣을 위치를 적을 수 있어요.</div>
           <div class="imggrid" id="imgGrid"></div>
         </div>
         <textarea id="prompt" placeholder="바꾸고 싶은 점을 적어 주세요.&#10;예: 히어로 제목을 더 크게, 버튼 색을 금색으로&#10;이미지는 붙여넣기(⌘V)나 끌어다 놓기로 첨부할 수 있습니다."></textarea>
@@ -616,6 +622,33 @@ $('#imgGo').onclick = async () => {
   } catch (e) { $('#imgMsg').textContent = e.message; }
   $('#imgGo').disabled = false; $('#imgGo').textContent = '만들기';
 };
+/* Gemini 앱(구독)으로 만들고 가져오기 — 키 없이 */
+let brandStyle = '';
+fetch('/__studio/api/images').then((r) => r.json()).then((d) => { brandStyle = d.style || ''; }).catch(() => {});
+$('#gemCopy').onclick = async () => {
+  const p = $('#imgPrompt').value.trim(); if (!p) return toast('어떤 이미지인지 먼저 적어 주세요');
+  const ratio = $('#imgAspect').value;
+  const text = `이미지를 만들어 줘. 비율 ${ratio}.\n${p}\n\n${$('#imgBrand').checked && brandStyle ? 'Style: ' + brandStyle : ''}`.trim();
+  try { await navigator.clipboard.writeText(text); toast('복사했어요. Gemini에 붙여넣으세요'); } catch { prompt('복사해서 Gemini에 붙여넣으세요', text); }
+};
+$('#gemOpen').onclick = () => window.open('https://gemini.google.com/app', 'gemini', 'width=1100,height=900');
+async function importImages(files) {
+  const list = [...files].filter((f) => /^image\/(png|jpeg|webp)$/.test(f.type)); if (!list.length) return toast('PNG·JPG·WEBP 이미지만 가져올 수 있어요');
+  let ok = 0;
+  for (const f of list) {
+    $('#imgMsg').textContent = `가져오는 중… ${f.name}`;
+    try {
+      const r = await fetch('/__studio/api/images/import', { method: 'POST', headers: { 'Content-Type': f.type, 'X-File-Name': encodeURIComponent(f.name), 'X-Prompt': encodeURIComponent($('#imgPrompt').value.trim()) }, body: f });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error); ok++; $('#imgMsg').textContent = `가져왔어요: ${j.url}`;
+    } catch (e) { $('#imgMsg').textContent = e.message; }
+  }
+  if (ok) { toast(`${ok}장 가져왔어요. 아래에서 눌러 채팅에 넣으세요`); loadImages(); }
+}
+$('#gemFile').onchange = (e) => { importImages(e.target.files); e.target.value = ''; };
+const ip = $('#imgPanel');
+['dragenter', 'dragover'].forEach((t) => ip.addEventListener(t, (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); e.stopPropagation(); ip.style.outline = '2px dashed var(--accent-2)'; } }));
+['dragleave', 'drop'].forEach((t) => ip.addEventListener(t, () => { ip.style.outline = ''; }));
+ip.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); importImages(e.dataTransfer.files); });
 $('#send').onclick = () => send();
 $('#stop').onclick = async () => { if (viewJob) await fetch(`/__studio/api/jobs/${viewJob}/stop`, { method: 'POST' }).catch(() => {}); };
 $('#prompt').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } });
