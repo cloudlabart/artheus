@@ -150,13 +150,51 @@ async function youtubeSummary(c: Json) {
     videos: vids.items.map((v: any) => ({ id: v.id, title: v.snippet.title, date: v.snippet.publishedAt, thumb: v.snippet.thumbnails?.medium?.url, views: +v.statistics.viewCount || 0, likes: +v.statistics.likeCount || 0, comments: +v.statistics.commentCount || 0, duration: v.contentDetails.duration })),
   };
 }
+/* 인스타그램: 두 종류 토큰 모두 지원
+   - 페이스북 로그인 토큰(EAA…) → graph.facebook.com, 비즈니스 계정 ID는 비어 있으면 페이지에서 자동으로 찾음
+   - 인스타그램 로그인 토큰(IG…, Meta 앱의 "Instagram API" 사용 사례) → graph.instagram.com, ID 필요 없음
+   실패하면 원인을 한국어로 알려 줌 */
+function igWhy(e: Json = {}, kind: string) {
+  const code = e.code, sub = e.error_subcode, msg = String(e.message || '');
+  if (/parse access token/i.test(msg)) return kind === 'fb' ? '토큰을 읽을 수 없어요. 복사할 때 앞뒤가 잘렸거나 공백이 들어갔는지 확인하세요. 인스타그램 로그인 방식으로 받은 토큰이라면 IG로 시작해야 해요.' : '토큰을 읽을 수 없어요. 복사할 때 앞뒤가 잘렸는지 확인하세요.';
+  if (code === 190) return sub === 463 ? '토큰이 만료됐어요. 새로 받아서(장기 토큰 60일) 설정에 다시 넣어 주세요.' : sub === 460 ? '페이스북 비밀번호가 바뀌어 토큰이 무효가 됐어요. 새로 받아 주세요.' : '토큰이 유효하지 않아요. 짧은 토큰(1시간)이었다면 만료됐을 수 있어요. 장기 토큰으로 바꿔 넣어 주세요.';
+  if (code === 10 || code === 200 || /permission/i.test(msg)) return '토큰에 권한이 부족해요. 토큰을 받을 때 instagram_basic, instagram_manage_insights, pages_show_list, pages_read_engagement 를 체크했는지 확인하세요.';
+  if (code === 100 && /does not exist|Unsupported get request/i.test(msg)) return '비즈니스 계정 ID가 맞지 않아요. 인스타 아이디(@…)나 페이스북 페이지 ID가 아니라 1784…로 시작하는 숫자여야 해요. 칸을 비워 두면 자동으로 찾아요.';
+  if ([4, 17, 32, 613].includes(code)) return '호출 한도에 걸렸어요. 1시간쯤 뒤에 다시 시도하세요.';
+  return msg || '알 수 없는 오류';
+}
+async function igGet(url: string) {
+  const r = await fetch(url); const j: any = await r.json().catch(() => ({}));
+  return r.ok && !j.error ? { ok: true, j } : { ok: false, e: j.error || { message: `HTTP ${r.status}` } };
+}
 async function instagramSummary(c: Json) {
-  const tok = c.instagram?.accessToken; const id = c.instagram?.userId;
-  if (!tok || !id) throw new Error('설정 › 인스타그램에서 액세스 토큰과 비즈니스 계정 ID를 넣어 주세요.');
+  const tok = String(c.instagram?.accessToken || '').trim().replace(/^["']|["']$/g, '');
+  let id = String(c.instagram?.userId || '').trim();
+  if (!tok) throw new Error('설정 › 인스타그램에 액세스 토큰을 넣어 주세요.');
+  const T = `access_token=${encodeURIComponent(tok)}`;
+  const PF = 'username,name,followers_count,follows_count,media_count,profile_picture_url';
+  const MF = 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count';
+  if (/^IG/.test(tok)) {
+    const base = 'https://graph.instagram.com/v21.0';
+    const prof = await igGet(`${base}/me?fields=user_id,${PF}&${T}`); if (!prof.ok) throw new Error('인스타그램 연결 실패: ' + igWhy(prof.e, 'ig'));
+    const media = await igGet(`${base}/me/media?fields=${MF}&limit=18&${T}`);
+    return { profile: prof.j, media: media.ok ? media.j.data || [] : [], kind: 'instagram-login', resolvedId: String(prof.j.user_id || prof.j.id || '') };
+  }
   const base = 'https://graph.facebook.com/v21.0';
-  const prof = await getJson(`${base}/${id}?fields=username,name,followers_count,follows_count,media_count,profile_picture_url&access_token=${tok}`);
-  const media = await getJson(`${base}/${id}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=18&access_token=${tok}`);
-  return { profile: prof, media: media.data || [] };
+  if (id && !/^\d+$/.test(id)) throw new Error(`비즈니스 계정 ID에 "${id}"가 들어 있어요. 숫자 ID(1784…)여야 해요. 칸을 비워 두면 자동으로 찾아요.`);
+  if (!id) {
+    const me = await igGet(`${base}/me?fields=id,name&${T}`); if (!me.ok) throw new Error('토큰 확인 실패: ' + igWhy(me.e, 'fb'));
+    const acc = await igGet(`${base}/me/accounts?fields=name,instagram_business_account{id,username}&limit=50&${T}`);
+    if (!acc.ok) throw new Error('페이지 목록을 못 읽었어요: ' + igWhy(acc.e, 'fb'));
+    const pages = acc.j.data || [];
+    if (!pages.length) throw new Error(`토큰 주인(${me.j.name})이 관리하는 페이스북 페이지가 없거나, 토큰에 pages_show_list 권한이 없어요. 토큰을 받을 때 학원 페이지를 선택했는지 확인하세요.`);
+    const hit = pages.find((p: Json) => p.instagram_business_account?.id);
+    if (!hit) throw new Error(`페이지(${pages.map((p: Json) => p.name).join(', ')})에 연결된 인스타 프로페셔널 계정이 없어요. 인스타 앱 › 프로필 편집 › 페이지에서 학원 페이스북 페이지를 연결하고, 계정이 비즈니스·크리에이터인지 확인하세요.`);
+    id = hit.instagram_business_account.id;
+  }
+  const prof = await igGet(`${base}/${id}?fields=${PF}&${T}`); if (!prof.ok) throw new Error('인스타그램 연결 실패: ' + igWhy(prof.e, 'fb'));
+  const media = await igGet(`${base}/${id}/media?fields=${MF}&limit=18&${T}`);
+  return { profile: prof.j, media: media.ok ? media.j.data || [] : [], kind: 'facebook-login', resolvedId: id };
 }
 function solapiAuth(key: string, secret: string) {
   const date = new Date().toISOString(); const salt = crypto.randomBytes(16).toString('hex');
@@ -335,7 +373,7 @@ export function createAdmin(root: string, here: string, jm: JobManager) {
       const c = store.config();
       send(res, 200, { config: mask(c), status: {
         kakao: !!(c.solapi?.apiKey && c.solapi?.apiSecret && c.solapi?.pfId && c.solapi?.from),
-        youtube: !!(c.youtube?.apiKey && c.youtube?.channel), instagram: !!(c.instagram?.accessToken && c.instagram?.userId),
+        youtube: !!(c.youtube?.apiKey && c.youtube?.channel), instagram: !!c.instagram?.accessToken,
         naver: !!c.naver?.placeUrl, image: !!(c.image?.geminiKey || c.image?.openaiKey),
       } }); return true;
     }
@@ -354,7 +392,14 @@ export function createAdmin(root: string, here: string, jm: JobManager) {
 
     /* 유튜브 · 인스타 */
     if (url === '/__studio/api/youtube') { try { send(res, 200, await youtubeSummary(store.config())); } catch (e: any) { send(res, 400, { error: e.message }); } return true; }
-    if (url === '/__studio/api/instagram') { try { send(res, 200, await instagramSummary(store.config())); } catch (e: any) { send(res, 400, { error: e.message }); } return true; }
+    if (url === '/__studio/api/instagram') {
+      try {
+        const c = store.config(); const r = await instagramSummary(c);
+        if (r.resolvedId && c.instagram?.userId !== r.resolvedId) { c.instagram = { ...(c.instagram || {}), userId: r.resolvedId }; store.saveConfig(c); } // 자동으로 찾은 ID 저장
+        send(res, 200, r);
+      } catch (e: any) { send(res, 400, { error: e.message }); }
+      return true;
+    }
 
     /* 아이폰 문자 발송 (Mac 전용, 한 번에 30건까지 · 건당 1.5초 간격) */
     if (url === '/__studio/api/sms/status') { send(res, 200, { available: process.platform === 'darwin' }); return true; }

@@ -19,7 +19,10 @@ async function load() {
       <div class="card"><h2>최근 게시물 <small>반응 = 좋아요 + 댓글</small></h2><div class="thumbs">${d.media.map((m) => `<a href="${esc(m.permalink)}" target="_blank" rel="noopener"><img src="${esc(m.thumbnail_url || m.media_url)}" alt="" loading="lazy"><span>${fmtDate(m.timestamp)} · ${m.media_type === 'CAROUSEL_ALBUM' ? '캐러셀' : m.media_type === 'VIDEO' ? '릴스·영상' : '사진'}</span><span class="muted">♥ ${n(m.like_count)} · 💬 ${n(m.comments_count)}</span></a>`).join('')}</div></div>`;
   } catch (e) {
     $('#out').innerHTML = `<div class="notice warn">${esc(e.message)}</div>
-      <div class="notice"><b>연결 방법 (Instagram Graph API)</b><br>1. 인스타그램 계정을 <b>프로페셔널(비즈니스·크리에이터)</b>으로 바꾸고 페이스북 페이지와 연결합니다.<br>2. developers.facebook.com 에서 앱을 만들고 Instagram Graph API를 추가합니다.<br>3. Graph API 탐색기에서 <code>instagram_basic, instagram_manage_insights, pages_show_list</code> 권한으로 토큰을 받고, 장기 토큰(60일)으로 바꿉니다.<br>4. <code>me/accounts</code> → 페이지의 <code>instagram_business_account</code> ID를 확인합니다.<br>5. <a href="#" id="go">설정 › 인스타그램</a>에 토큰과 ID를 넣습니다. 토큰은 60일마다 새로 받아야 해요.</div>`;
+      <div class="notice"><b>연결 방법</b> (둘 중 편한 쪽 하나)<br>
+        <b>A. 인스타그램 로그인 (간단)</b> — developers.facebook.com › 내 앱 › 앱 만들기 › 사용 사례 <b>"Instagram API"</b> › API 설정 › <b>액세스 토큰 생성</b>에서 @artheus_act 로그인 → 나온 토큰(IG로 시작)을 복사해 설정에 넣기. ID 칸은 비워 두세요.<br>
+        <b>B. 페이스북 로그인</b> — 인스타 계정을 프로페셔널로 바꾸고 학원 페이스북 페이지와 연결 → Graph API 탐색기에서 <code>instagram_basic, instagram_manage_insights, pages_show_list, pages_read_engagement</code> 체크 후 토큰 생성(학원 페이지 선택) → 액세스 토큰 도구에서 <b>장기 토큰</b>으로 연장 → 토큰(EAA로 시작)만 설정에 넣기. ID는 자동으로 찾아요.<br>
+        토큰은 60일마다 새로 받아야 해요. <a href="#" id="go">설정 › 인스타그램 열기</a></div>`;
     $('#go').onclick = (ev) => { ev.preventDefault(); K.open('settings'); };
   }
 }
