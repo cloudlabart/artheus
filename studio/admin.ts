@@ -129,14 +129,22 @@ function mask(c: Json) {
 }
 
 /* ── 외부 API ── */
+function googleWhy(msg: string, url = '') {
+  const svc = url.includes('youtube') ? '유튜브' : url.includes('generativelanguage') ? 'Gemini' : '구글';
+  if (/API key not valid/i.test(msg)) return `${svc} API 키가 올바르지 않아요(API key not valid). 키를 다시 복사해 넣으세요 — AIza로 시작하는 39자, 앞뒤 잘림 없이. 키를 지웠거나 다른 키를 넣었을 수도 있어요.${svc === '유튜브' ? ' 유튜브 키는 Google Cloud 콘솔 › API 및 서비스 › 사용자 인증 정보에서 만들고, YouTube Data API v3를 사용 설정해야 해요.' : ''}`;
+  if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return `${svc} API가 이 키의 프로젝트에서 꺼져 있어요. Google Cloud 콘솔 › API 라이브러리에서 ${svc === '유튜브' ? 'YouTube Data API v3' : '해당 API'}를 사용 설정하세요.`;
+  if (/referer|referrer|IP address|blocked/i.test(msg)) return `${svc} API 키에 사용 제한(웹사이트·IP)이 걸려 있어 막혔어요. 사용자 인증 정보 › 키 › 애플리케이션 제한을 "없음"으로 바꾸고, API 제한으로 필요한 API만 허용하세요.`;
+  if (/quota/i.test(msg)) return `${svc} 하루 사용량을 다 썼어요. 내일 다시 시도하세요.`;
+  return msg;
+}
 async function getJson(url: string, init?: RequestInit) {
   const r = await fetch(url, init);
   const t = await r.text(); let j: any; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 300) }; }
-  if (!r.ok) throw new Error(j?.error?.message || j?.errorMessage || j?.message || `HTTP ${r.status}`);
+  if (!r.ok) throw new Error(googleWhy(j?.error?.message || j?.errorMessage || j?.message || `HTTP ${r.status}`, url));
   return j;
 }
 async function youtubeSummary(c: Json) {
-  const key = c.youtube?.apiKey; let ch = String(c.youtube?.channel || '').trim();
+  const key = encodeURIComponent(String(c.youtube?.apiKey || '').trim()); let ch = String(c.youtube?.channel || '').trim();
   if (!key || !ch) throw new Error('설정 › 유튜브에서 API 키와 채널(ID 또는 @핸들)을 넣어 주세요.');
   const q = ch.startsWith('UC') ? `id=${encodeURIComponent(ch)}` : `forHandle=${encodeURIComponent(ch.replace(/^@?/, '@'))}`;
   const chj = await getJson(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&${q}&key=${key}`);
@@ -369,6 +377,23 @@ export function createAdmin(root: string, here: string, jm: JobManager) {
     }
 
     /* 연동 설정 */
+    /* 연동 연결 확인 (설정 화면의 [확인] 버튼) */
+    if (url.startsWith('/__studio/api/integrations/test') && m === 'GET') {
+      const sec = new URL(req.url || '', 'http://x').searchParams.get('sec'); const c = store.config();
+      try {
+        if (sec === 'youtube') { const r = await youtubeSummary(c); send(res, 200, { ok: true, msg: `연결됨: ${r.channel?.title || '채널'} · 구독자 ${r.channel?.subscribers ?? '-'}` }); }
+        else if (sec === 'instagram') { const r = await instagramSummary(c); send(res, 200, { ok: true, msg: `연결됨: @${r.profile.username} · 팔로워 ${r.profile.followers_count ?? '-'}` }); }
+        else if (sec === 'image') {
+          const im = c.image || {}; const out: string[] = [];
+          if (im.geminiKey) { const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1', { headers: { 'x-goog-api-key': String(im.geminiKey).trim() } }); const j: any = await r.json().catch(() => ({})); out.push(r.ok ? 'Gemini 키 정상' : 'Gemini: ' + googleWhy(j.error?.message || `HTTP ${r.status}`, 'generativelanguage')); }
+          if (im.openaiKey) { const r = await fetch('https://api.openai.com/v1/models', { headers: { authorization: `Bearer ${String(im.openaiKey).trim()}` } }); const j: any = await r.json().catch(() => ({})); out.push(r.ok ? 'OpenAI 키 정상' : 'OpenAI: ' + (j.error?.message || `HTTP ${r.status}`)); }
+          if (!out.length) throw new Error('키가 없어요.');
+          send(res, 200, { ok: out.every((x) => x.endsWith('정상')), msg: out.join(' · ') });
+        }
+        else send(res, 400, { error: '확인할 수 없는 항목이에요.' });
+      } catch (e: any) { send(res, 200, { ok: false, msg: e.message }); }
+      return true;
+    }
     if (url === '/__studio/api/integrations' && m === 'GET') {
       const c = store.config();
       send(res, 200, { config: mask(c), status: {

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="ko"><head><meta charset="utf-8"><link rel="icon" type="image/png" href="/favicon.png"><link rel="apple-touch-icon" href="/favicon.png"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>설정</title><link rel="stylesheet" href="/__studio/kit/kit.css"><script src="/__studio/kit/kit.js"></script></head>
 <body><div class="page">
   <div class="head"><h1>설정</h1><span class="sub">연동 키와 데이터는 이 컴퓨터(.studio 폴더)에만 저장되고 GitHub에 올라가지 않습니다.</span></div>
@@ -45,8 +45,12 @@ async function load() {
       ? `<label class="f">${esc(f.label)}<select class="in" name="${f.k}">${f.options.map(([v, t]) => `<option value="${v}" ${(config[s.id]?.[f.k] || '') === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`
       : f.type === 'checkbox'
       ? `<label class="f check"><input type="checkbox" name="${f.k}" ${config[s.id]?.[f.k] ? 'checked' : ''}>${esc(f.label)}</label>`
-      : `<label class="f">${esc(f.label)}<input class="in" name="${f.k}" type="${f.type || 'text'}" value="${esc(config[s.id]?.[f.k] || '')}" placeholder="${esc(f.ph || '')}" autocomplete="off"></label>`).join('')}
-    <div class="row"><span class="spacer"></span><button class="btn primary">저장</button></div></form>`).join('');
+      : `<label class="f">${esc(f.label)}<input class="in" name="${f.k}" type="${f.type || 'text'}" value="${esc(config[s.id]?.[f.k] || '')}" placeholder="${esc(f.ph || '')}" autocomplete="${f.type === 'password' ? 'new-password' : 'off'}" data-1p-ignore data-lpignore="true" spellcheck="false"></label>`).join('')}
+    <div class="small" data-test-out></div><div class="row">${['youtube', 'instagram', 'image'].includes(s.id) ? '<button type="button" class="btn" data-test>연결 확인</button>' : ''}<span class="spacer"></span><button class="btn primary">저장</button></div></form>`).join('');
+  document.querySelectorAll('[data-test]').forEach((b) => (b.onclick = async () => {
+    const f = b.closest('form'); const out = f.querySelector('[data-test-out]'); out.textContent = '확인 중…';
+    try { const r = await api('/__studio/api/integrations/test?sec=' + f.dataset.sec); out.innerHTML = `<span class="badge ${r.ok ? 'ok' : 'warn'}">${r.ok ? '정상' : '문제'}</span> ${esc(r.msg)}`; } catch (e) { out.textContent = e.message; }
+  }));
   document.querySelectorAll('form[data-sec]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault(); const sec = f.dataset.sec; const vals = {};
     for (const el of f.elements) if (el.name) vals[el.name] = el.type === 'checkbox' ? el.checked : el.value;

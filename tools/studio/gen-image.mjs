@@ -39,11 +39,11 @@ const slugify = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').repla
 async function gemini(cfg, prompt, aspect) {
   const model = cfg.geminiModel || 'gemini-2.5-flash-image';
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': cfg.geminiKey },
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': String(cfg.geminiKey).trim() },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: aspect } } }),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`Gemini ${r.status}: ${j.error?.message || r.statusText}${r.status === 404 ? ' (설정에서 모델 이름을 확인하세요)' : ''}`);
+  if (!r.ok) throw new Error(/API key not valid/i.test(j.error?.message || '') ? 'Gemini 키가 올바르지 않아요(API key not valid). aistudio.google.com/apikey 에서 AIza로 시작하는 키를 다시 복사해 설정 › 이미지 생성에 넣으세요.' : `Gemini ${r.status}: ${j.error?.message || r.statusText}${r.status === 404 ? ' (설정에서 모델 이름을 확인하세요)' : ''}`);
   const part = (j.candidates?.[0]?.content?.parts || []).find((p) => p.inlineData?.data);
   if (!part) throw new Error('Gemini가 이미지를 돌려주지 않았어요. ' + (j.candidates?.[0]?.finishReason || '') + ' 프롬프트를 바꿔 보세요.');
   return { buf: Buffer.from(part.inlineData.data, 'base64'), ext: (part.inlineData.mimeType || 'image/png').includes('jpeg') ? 'jpg' : 'png' };
@@ -52,7 +52,7 @@ async function openai(cfg, prompt, aspect) {
   const [w, h] = aspect.split(':').map(Number);
   const size = w > h ? '1536x1024' : w < h ? '1024x1536' : '1024x1024';
   const r = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.openaiKey}` },
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${String(cfg.openaiKey).trim()}` },
     body: JSON.stringify({ model: cfg.openaiModel || 'gpt-image-1', prompt, size, n: 1 }),
   });
   const j = await r.json().catch(() => ({}));
